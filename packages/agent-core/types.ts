@@ -116,6 +116,8 @@ export interface ReadSource {
   title: string;
   /** ISO timestamp when the build read this page. */
   readAt: string;
+  /** Was this page selected by an explicit subscription or browsing history? */
+  origin?: "followed" | "history";
 }
 
 export interface HomepageBuildResult {

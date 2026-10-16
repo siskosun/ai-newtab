@@ -142,7 +142,7 @@ export class BuildManager {
       return; // single-flight: a second start just attaches.
     }
 
-    const { apiKey, systemPrompt, model, provider, endpoint, locale } = await loadSettings();
+    const { apiKey, systemPrompt, model, provider, endpoint, locale, followedSites } = await loadSettings();
     if (!apiKey && !isKeylessLocalProvider(provider, endpoint)) {
       // Manual builds are gated behind the key-setup screen and auto-builds
       // require a key, so this only happens if the key was removed.
@@ -167,6 +167,7 @@ export class BuildManager {
         bridge: browserBridge,
         userSystemPrompt: systemPrompt,
         blockedSites: async () => (await loadSettings()).blockedSites,
+        followedSites,
         signal: this.controller.signal,
         callbacks: {
           onPhase: (phase, detail) => this.onPhase(phase, detail),

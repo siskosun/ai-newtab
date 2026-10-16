@@ -36,7 +36,7 @@ test("AIHOT-inspired curation: only successfully read, allowed sources are persi
      language:"zh-CN",bridge,now:new Date("2026-10-16T08:00:00.000Z")
    });
    expect(output.sources).toEqual([{
-     url:"https://news.example.org/",title:"Public News",readAt:"2026-10-16T08:00:00.000Z"
+     url:"https://news.example.org/",title:"Public News",readAt:"2026-10-16T08:00:00.000Z",origin:"history"
    }]);
    const prompt=payload.messages[1].content as string;
    const system=payload.messages[0].content as string;

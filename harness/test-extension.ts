@@ -248,6 +248,39 @@ try {
     check("panel distinguishes read time from publication time", provenanceText.includes("读取时间不是新闻发布时间"));
   }
 
+  // Local-only subscription settings smoke test, with no model request.
+  await page.evaluate("chrome.storage.local.set({followedSites:['https://news.example.org/technology']})");
+  await page.send("Page.reload", {ignoreCache: true});
+  let settingsButton = false;
+  for (let i = 0; i < 35; i++) {
+    await sleep(250);
+    try {
+      settingsButton = await page.evaluate<boolean>(`[...document.querySelectorAll("button")].some(b=>b.title==="设置")`);
+      if (settingsButton) break;
+    } catch {/* reloading */}
+  }
+  check("settings can open after restoring a followed site",settingsButton);
+  if (settingsButton) {
+    await page.evaluate<string>(`[...document.querySelectorAll("button")].find(b=>b.title==="设置")?.click(); "clicked"`);
+    await sleep(200);
+    const label=await page.evaluate<boolean>(`Boolean([...document.querySelectorAll("textarea")].find(t=>t.getAttribute("aria-label")?.includes("主动订阅的网站")))`);
+    check("Chinese settings exposes followed-site editor",label);
+    const stored=await page.evaluate<string>(`[...document.querySelectorAll("textarea")].find(t=>t.getAttribute("aria-label")?.includes("主动订阅的网站"))?.value??""`);
+    check("followed-site preference loads from storage",stored==="https://news.example.org/technology",stored);
+    await page.evaluate<string>(`(()=>{
+      const field=[...document.querySelectorAll("textarea")].find(t=>t.getAttribute("aria-label")?.includes("主动订阅的网站"));
+      if(!field)return "missing";
+      const setter=Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,"value").set;
+      setter.call(field,"https://mail.google.com/mail/");
+      field.dispatchEvent(new Event("input",{bubbles:true}));
+      return "changed";
+    })()`);
+    await page.evaluate<string>(`[...document.querySelectorAll("button")].find(b=>b.textContent?.includes("保存并重新生成"))?.click(); "clicked"`);
+    await sleep(250);
+    const blockedWarning=await page.evaluate<string>(`document.querySelector('[role="dialog"] [role="alert"]')?.textContent??""`);
+    check("blocked mail URL cannot be saved",blockedWarning.includes("订阅网址"),blockedWarning.slice(0,120));
+  }
+
   page.close();
   browser.close();
 } catch (err) {

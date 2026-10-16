@@ -32,6 +32,14 @@ npx pnpm@10.11.1 extension:test
 
 The original Anthropic Managed Agents harness scripts remain upstream-specific reference tests; they do not validate the new multi-provider pipeline. API end-to-end checks require real user-supplied keys and credits.
 
+## Followed websites + browsing interests
+
+In **Settings → Websites to follow**, enter up to **four** website addresses, one per line (`example.org` or `https://example.org/section`). Explicitly followed sites are fetched first and browsing-history interests fill the remaining slots, for **eight pages maximum per build**. Only one URL per host is selected. With no subscriptions, the original history-only workflow is preserved; subscriptions also work with empty history.
+
+URLs are normalized to HTTPS when no scheme is supplied. Query strings and fragments are removed before they are stored or loaded; credentials, private/local hosts, email/document/login destinations and user-blocked domains are rejected. This is website-page scraping, **not** an RSS parser. Saved subscriptions are local to the browser profile, but page excerpts still go to your chosen model provider. The Sources read panel identifies pages selected from followed websites vs browsing history.
+
+This change does not add model calls, a database, or a hosted service.
+
 ## AIHOT-inspired editorial safeguards
 
 This fork borrows **ideas**, not implementation code, from [AIHOT](https://github.com/KKKKhazix/AIHOT): source provenance, cautious event-level deduplication and avoiding false freshness. The new **Sources read** panel lists successfully loaded pages, their read times and a parameter-stripped link. Read time is *not* article publication time; these records are *not* an independent fact-check. Blocked/failed pages never appear. Existing generated homepages acquire a source list after the next successful rebuild.
