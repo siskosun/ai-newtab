@@ -40,6 +40,14 @@ URLs are normalized to HTTPS when no scheme is supplied. Query strings and fragm
 
 This change does not add model calls, a database, or a hosted service.
 
+## Incremental automatic rebuilds (no-change = no model call)
+
+**Settings → Smart auto-update** is enabled by default. It affects only scheduled updates: the extension still reads selected pages and computes a SHA-256 fingerprint of the effective content, selected sources and output-affecting configuration. If a complete check matches the previously **successful** homepage, the extension reuses its generated code, preserving the original generation date and sources, and shows a visible no-change status. No text-generation API request is sent for that check.
+
+Manual **Rebuild** and **Save & rebuild** always invoke the selected model. Failed, blocked, missing or partial page reads cannot trigger reuse; neither can a new selection, content, title, original link, language, instructions, provider, model, endpoint or blocked site list. Reuse expires after **24 hours**, and generation is required across UTC date changes. Old homepages without a fingerprint must be generated once to seed the cache.
+
+Only the SHA-256 digest and check timestamp are stored in addition to existing homepage metadata. The feature does not store new page contents, API keys or history; it does not add network services or model calls. Dynamic news-page chrome (counters, timestamps, ads) can still invalidate a cache, so cost savings are best-effort rather than guaranteed. Scheduled checks still load websites; they are not free of network activity.
+
 ## AIHOT-inspired editorial safeguards
 
 This fork borrows **ideas**, not implementation code, from [AIHOT](https://github.com/KKKKhazix/AIHOT): source provenance, cautious event-level deduplication and avoiding false freshness. The new **Sources read** panel lists successfully loaded pages, their read times and a parameter-stripped link. Read time is *not* article publication time; these records are *not* an independent fact-check. Blocked/failed pages never appear. Existing generated homepages acquire a source list after the next successful rebuild.

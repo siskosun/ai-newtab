@@ -281,6 +281,40 @@ try {
     check("blocked mail URL cannot be saved",blockedWarning.includes("订阅网址"),blockedWarning.slice(0,120));
   }
 
+
+  // An incremental check is local-only; no API credentials are used for this smoke test.
+  const incrementalToggle = await page.evaluate<boolean>(`[...document.querySelectorAll("label")].some(x=>x.textContent?.includes("智能增量更新") && x.querySelector('input[type="checkbox"]'))`);
+  check("incremental auto-update is exposed in Chinese settings",incrementalToggle);
+  if(incrementalToggle){
+    const checked = await page.evaluate<boolean>(`Boolean([...document.querySelectorAll("label")].find(x=>x.textContent?.includes("智能增量更新"))?.querySelector('input')?.checked)`);
+    check("incremental auto-update defaults to enabled",checked);
+    await page.evaluate<string>(`[...document.querySelectorAll("label")].find(x=>x.textContent?.includes("智能增量更新"))?.querySelector('input')?.click(); "clicked"`);
+    await sleep(250);
+    const persisted=await page.evaluate<boolean>(`chrome.storage.local.get("incrementalUpdates").then(d=>d.incrementalUpdates===false)`);
+    check("incremental toggle persists in local storage",persisted);
+  }
+
+  // A no-change check preserves the saved homepage and shows an unobtrusive notice.
+  const persistedHomepage=await page.evaluate<string>(`
+    chrome.storage.local.get("homepageData").then(data=>{
+      const original=data.homepageData;
+      if(!original)return "missing";
+      return chrome.storage.local.set({
+        homepageData:{...original,lastCheckedAt:"2026-10-16T14:00:00.000Z",lastCheckUnchanged:true}
+      }).then(()=>"saved");
+    })`);
+  check("offline no-change fixture stored",persistedHomepage==="saved");
+  await page.send("Page.reload",{ignoreCache:true});
+  let notice="";
+  for(let i=0;i<35;i++){
+    await sleep(250);
+    try{
+      notice=await page.evaluate<string>(`document.querySelector('[role="status"]')?.textContent??""`);
+      if(notice.includes("未调用模型"))break;
+    }catch {/* reload in progress */}
+  }
+  check("new-tab UI explains skipped model call",notice.includes("未调用模型"),notice.slice(0,100));
+
   page.close();
   browser.close();
 } catch (err) {

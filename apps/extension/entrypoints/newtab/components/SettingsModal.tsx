@@ -24,6 +24,8 @@ export interface SettingsModalProps {
   locale: HomepageLanguage;
   autoRebuild: boolean;
   onToggleAutoRebuild: (enabled: boolean) => void;
+  incrementalUpdates: boolean;
+  onToggleIncrementalUpdates: (enabled: boolean) => void;
   intervalHours: number;
   onChangeInterval: (hours: number) => void;
   onClose: () => void;
@@ -37,7 +39,7 @@ const inputStyle = {
 
 export function SettingsModal({
   initialPrompt, blockedSites, followedSites, provider, model, apiKey, endpoint, locale,
-  autoRebuild, onToggleAutoRebuild, intervalHours, onChangeInterval,
+  autoRebuild, onToggleAutoRebuild, incrementalUpdates, onToggleIncrementalUpdates, intervalHours, onChangeInterval,
   onClose, onSave,
 }: SettingsModalProps) {
   const [draft, setDraft] = useState(initialPrompt);
@@ -150,6 +152,12 @@ export function SettingsModal({
           <input type="checkbox" checked={autoRebuild} onChange={(e) => onToggleAutoRebuild(e.target.checked)} />
           {" "}{t(languageDraft, "autoRebuild")}
         </label>
+        <label style={{ display: "block", marginTop: 10, opacity: autoRebuild ? 1 : .6 }}>
+          <input type="checkbox" checked={incrementalUpdates} disabled={!autoRebuild}
+            onChange={(e) => onToggleIncrementalUpdates(e.target.checked)} />
+          {" "}{t(languageDraft, "incrementalUpdates")}
+        </label>
+        <p style={{ fontSize: 12, color:"#666", lineHeight:1.5, marginTop:6 }}>{t(languageDraft, "incrementalHelp")}</p>
         <label style={{ display: "block", marginTop: 10 }}>
           {t(languageDraft, "every")}
           <select value={intervalHours} disabled={!autoRebuild} onChange={(e) => onChangeInterval(Number(e.target.value))} style={{ marginLeft: 10, padding: 6 }}>

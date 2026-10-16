@@ -1,5 +1,6 @@
 import {buildHistoryDigest} from "./history-digest";
 import {selectHomepageSites} from "./followed-sites";
+import {canReuseHomepage,fingerprintHomepage} from "./incremental";
 import {normalizeHomepageLanguage,homepageLanguageInstruction,type HomepageLanguage} from "./language";
 import {DEFAULT_BLOCKED_SITES,isAllowedUrl,isBlocked,normalizeBlockList} from "./site-filter";
 import {DEFAULTS} from "./schemas";
@@ -11,6 +12,8 @@ export interface MultiRunOptions {
  language?:HomepageLanguage;
  blockedSites?:string[]|(()=>Promise<string[]>);
  followedSites?:string[]|(()=>Promise<string[]>); callbacks?:RunCallbacks;
+ /** Supplied only for automatic incremental rebuilds; manual rebuilds omit this. */
+ incrementalCache?: {fingerprint:string;generatedAt:string;code:string;sources?:ReadSource[]};
  signal?:AbortSignal; now?:Date;
 }
 function extractLinks(html:string,base:string){
@@ -92,6 +95,58 @@ export async function runMultiHomepageBuild(o:MultiRunOptions):Promise<HomepageB
   : language==="ja"
   ? "選択 "+urls.length+" 件、取得 "+pages.length+" 件、失敗 "+failedCount+" 件。"
   : "Selected "+urls.length+" sites; read "+pages.length+" pages; failed "+failedCount+".");
+ // Only consider reuse after all selected pages were read. An incomplete check
+ // must NEVER be treated as "nothing new" or overwrite the successful cache.
+ const successfulOriginalUrls = new Set(pages.map(page=>page.url));
+ const coverageComplete = urls.length>0 && result.failed.length===0 &&
+   pages.length===urls.length && sources.length===urls.length &&
+   successfulOriginalUrls.size===urls.length &&
+   urls.every(url=>successfulOriginalUrls.has(url));
+ let fingerprint:string|undefined;
+ try {
+   fingerprint=await fingerprintHomepage({
+     date:readAt.slice(0,10),
+     language,
+     provider:o.provider.provider,
+     model:o.provider.model,
+     endpoint:o.provider.endpoint??"",
+     instructions:o.userSystemPrompt??"",
+     blockedSites:blocked,
+     followedSites:selectedSites.filter(site=>site.origin==="followed").map(site=>site.url),
+     selectedSites,
+     historyHeadlines:selectedSites.filter(site=>site.origin==="history").map(site=>({
+       domain:new URL(site.url).hostname,
+       sampleTitles:digest.sites.find(item=>new URL(site.url).hostname===item.domain)?.sampleTitles??[],
+     })),
+     pages:snippets.map(({url,title,origin,text,links})=>({url,title,origin,text,links})),
+   });
+ } catch {
+   // No crypto or a digest failure never blocks a full rebuild.
+   o.callbacks?.onLog?.("Incremental fingerprint unavailable; generating the page.");
+ }
+ if(o.signal?.aborted)throw Error("Build cancelled.");
+ if(o.incrementalCache && canReuseHomepage({
+    previousFingerprint:o.incrementalCache.fingerprint,
+    currentFingerprint:fingerprint,
+    generatedAt:o.incrementalCache.generatedAt,
+    checkedAt:new Date(readAt),
+    coverageComplete,
+ })) {
+   o.callbacks?.onLog?.(
+     language==="zh-CN"?"网页无实质变化；本次未调用模型。":
+     language==="ja"?"ページに有意な変化はありません。モデル呼び出しを省略しました。":
+     "No source changes detected; model call skipped.");
+   emit("done");
+   return {
+     code:o.incrementalCache.code,
+     sessionId:"local-cache-"+Date.now(),
+     source:"message-fence",
+     sources:o.incrementalCache.sources??[],
+     fingerprint,
+     unchanged:true,
+     checkedAt:readAt,
+   };
+ }
  const prompt=[
   "Date: "+(o.now??new Date()).toISOString().slice(0,10),
   "Required user-visible language: "+language,
@@ -113,5 +168,5 @@ export async function runMultiHomepageBuild(o:MultiRunOptions):Promise<HomepageB
  const generated=await generateText(o.provider,systemPrompt,prompt,o.signal);
  const code=assertSafeHomepage(generated,[...allowed]);
  emit("done");
- return {code,sessionId:"local-"+Date.now(),source:"message-fence",sources};
+ return {code,sessionId:"local-"+Date.now(),source:"message-fence",sources,fingerprint,unchanged:false,checkedAt:readAt};
 }
