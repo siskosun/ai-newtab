@@ -160,6 +160,18 @@ try {
   check("new tab defaults to Simplified Chinese", lang === "zh-CN", lang);
   check("language picker is visible on first run", /简体中文/.test(bodyText));
 
+  // A stored preference must survive reopening the new tab and change static UI.
+  await page.evaluate("chrome.storage.local.set({homepageLanguage:'en'})");
+  await page.send("Page.reload", {ignoreCache:true});
+  await sleep(1800);
+  const english = await page.evaluate<string>("document.body.innerText");
+  check("stored English choice survives reload", /Connect an AI provider/.test(english), english.slice(0,60));
+  await page.evaluate("chrome.storage.local.set({homepageLanguage:'zh-CN'})");
+  await page.send("Page.reload", {ignoreCache:true});
+  await sleep(1800);
+  const chinese = await page.evaluate<string>("document.body.innerText");
+  check("switching back to Chinese survives reload", /连接 AI 模型服务/.test(chinese), chinese.slice(0,60));
+
   // Open a build port, send one message, and collect replies for a moment.
   const talk = (msg: object, waitMs: number) =>
     page.evaluate<string>(`
