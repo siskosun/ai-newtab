@@ -161,7 +161,7 @@ export default function App() {
         <SettingsModal
           initialPrompt={systemPrompt}
           blockedSites={blockedSites}
-          model={model} provider={provider} apiKey={apiKey} endpoint={endpoint}
+          model={model} provider={provider} apiKey={apiKey ?? ""} endpoint={endpoint}
           locale={locale} autoRebuild={autoRebuild}
           onToggleAutoRebuild={toggleAutoRebuild}
           intervalHours={intervalHours} onChangeInterval={changeInterval}
@@ -224,7 +224,7 @@ export default function App() {
         <SettingsModal
           initialPrompt={systemPrompt}
           blockedSites={blockedSites}
-          model={model} provider={provider} apiKey={apiKey} endpoint={endpoint}
+          model={model} provider={provider} apiKey={apiKey ?? ""} endpoint={endpoint}
           locale={locale} autoRebuild={autoRebuild}
           onToggleAutoRebuild={toggleAutoRebuild}
           intervalHours={intervalHours} onChangeInterval={changeInterval}
