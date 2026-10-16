@@ -1,39 +1,16 @@
-import { useState } from "react";
-import { btn } from "./ui";
-
-export function ApiKeySetup({ onSave }: { onSave: (key: string) => void }) {
-  const [value, setValue] = useState("");
-  const valid = value.trim().startsWith("sk-ant-");
-
-  return (
-    <div style={{ maxWidth: 520, margin: "12vh auto", padding: 24, fontFamily: "system-ui" }}>
-      <h1 style={{ fontSize: 24 }}>Connect your Anthropic API key</h1>
-      <p style={{ color: "#555", lineHeight: 1.6 }}>
-        The agent runs inside this extension and talks to the Anthropic API directly. Your key
-        is stored in <code>chrome.storage.local</code> on this machine and is never sent
-        anywhere else.
-      </p>
-      <input
-        type="password"
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        placeholder="sk-ant-..."
-        style={{
-          width: "100%",
-          padding: 12,
-          fontSize: 14,
-          borderRadius: 4,
-          border: "1px solid #ddd",
-          fontFamily: "ui-monospace, monospace",
-        }}
-      />
-      <button
-        style={{ ...btn, marginTop: 16, opacity: valid ? 1 : 0.5 }}
-        disabled={!valid}
-        onClick={() => onSave(value.trim())}
-      >
-        Save key
-      </button>
-    </div>
-  );
+import {useState} from "react";
+import {PROVIDERS,providerPreset,type ProviderId} from "@homepage/agent-core";
+import {btn} from "./ui";
+export function ApiKeySetup({onSave}:{onSave:(key:string,provider:ProviderId,model:string)=>void}){
+ const [provider,setProvider]=useState<ProviderId>("openai");
+ const [model,setModel]=useState<string>(providerPreset("openai").model);
+ const [key,setKey]=useState("");
+ return <div style={{maxWidth:540,margin:"12vh auto",padding:24,fontFamily:"system-ui"}}>
+ <h1>Connect your AI provider</h1><p>Choose a model provider. Your API key stays in Chrome local storage. Your browsing excerpts are sent to its API when you rebuild.</p>
+ <select value={provider} onChange={e=>{const p=e.target.value as ProviderId;setProvider(p);setModel(providerPreset(p).model);setKey("")}} style={{display:"block",padding:10,width:"100%",marginBottom:12}}>{PROVIDERS.filter(p=>p.id!=="compatible").map(p=><option key={p.id} value={p.id}>{p.label}</option>)}</select>
+ <input value={model} onChange={e=>setModel(e.target.value)} placeholder="Model ID" style={{display:"block",width:"100%",boxSizing:"border-box",padding:10,marginBottom:12}}/>
+ <input type="password" autoComplete="off" value={key} onChange={e=>setKey(e.target.value)} placeholder="API key" style={{display:"block",width:"100%",boxSizing:"border-box",padding:10}}/>
+ <button style={{...btn,marginTop:14}} disabled={!key.trim()||!model.trim()} onClick={()=>onSave(key.trim(),provider,model.trim())}>Save provider</button>
+ <p style={{fontSize:12,color:"#666"}}>For custom OpenAI-compatible endpoints, first connect a provider then open Settings.</p>
+ </div>;
 }

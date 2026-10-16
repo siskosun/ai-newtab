@@ -1,7 +1,6 @@
+import { DEFAULT_PROVIDER, DEFAULT_MODEL as MULTI_DEFAULT_MODEL, providerPreset, isProviderId, type ProviderId } from "@homepage/agent-core";
 import {
-  DEFAULT_MODEL,
   DEFAULT_BLOCKED_SITES,
-  MODEL_CHOICES,
   STORAGE_KEYS as AGENT_KEYS,
   type HomepageModel,
   type KVStore,
@@ -19,6 +18,9 @@ export const KEYS = {
   systemPrompt: "systemPrompt",
   blockedSites: "blockedSites",
   model: "model",
+  provider: "provider",
+  endpoint: "endpoint",
+  credentials: "providerCredentials",
   autoRebuild: "autoRebuild",
   /** ISO timestamp of the last auto-build *attempted* (success or not). */
   lastAutoBuildAttempt: "lastAutoBuildAttempt",
@@ -39,6 +41,8 @@ export interface Settings {
   systemPrompt: string;
   blockedSites: string[];
   model: HomepageModel;
+  provider: ProviderId;
+  endpoint: string;
   /** Unset means on — auto-rebuild is opt-out. */
   autoRebuild: boolean;
   rebuildIntervalHours: number | null;
@@ -64,22 +68,31 @@ export async function loadSettings(): Promise<Settings> {
     KEYS.systemPrompt,
     KEYS.blockedSites,
     KEYS.model,
+    KEYS.provider,
+    KEYS.endpoint,
+    KEYS.credentials,
     KEYS.autoRebuild,
     KEYS.rebuildIntervalHours,
   ]);
-  const model = s[KEYS.model] as string | undefined;
+  const provider = isProviderId(s[KEYS.provider]) ? s[KEYS.provider] as ProviderId : DEFAULT_PROVIDER;
+  const credentials = (s[KEYS.credentials] as Record<string,{apiKey:string;model:string;endpoint:string}> | undefined) ?? {};
+  const selected = credentials[provider];
+  const legacyKey = (s[KEYS.apiKey] as string | undefined) ?? null;
+  const legacyModel = s[KEYS.model] as string | undefined;
   return {
-    apiKey: (s[KEYS.apiKey] as string | undefined) ?? null,
+    apiKey: selected?.apiKey ?? (provider === DEFAULT_PROVIDER ? legacyKey : null),
     systemPrompt: (s[KEYS.systemPrompt] as string | undefined) ?? "",
     blockedSites: (s[KEYS.blockedSites] as string[] | undefined) ?? [...DEFAULT_BLOCKED_SITES],
     // Fall back if a stored model is no longer offered.
-    model: MODEL_CHOICES.find((m) => m.id === model)?.id ?? DEFAULT_MODEL,
+    model: selected?.model ?? (provider === DEFAULT_PROVIDER ? (legacyModel ?? MULTI_DEFAULT_MODEL) : providerPreset(provider).model),
+    provider,
+    endpoint: selected?.endpoint ?? (s[KEYS.endpoint] as string | undefined) ?? "",
     autoRebuild: s[KEYS.autoRebuild] !== false,
     rebuildIntervalHours: (s[KEYS.rebuildIntervalHours] as number | undefined) ?? null,
   };
 }
 
-export async function saveSetting<K extends "apiKey" | "systemPrompt" | "blockedSites" | "model" | "autoRebuild" | "rebuildIntervalHours">(
+export async function saveSetting<K extends "apiKey" | "systemPrompt" | "blockedSites" | "model" | "provider" | "endpoint" | "autoRebuild" | "rebuildIntervalHours">(
   key: K,
   value: Settings[K],
 ): Promise<void> {
@@ -93,4 +106,10 @@ export async function loadHomepage(): Promise<Homepage | undefined> {
 export async function saveHomepage(code: string): Promise<void> {
   const homepage: Homepage = { code, timestamp: new Date().toISOString() };
   await extensionStore.set(KEYS.homepage, homepage);
+}
+
+export async function saveProviderConfiguration(provider: ProviderId, apiKey:string, model:string, endpoint:string):Promise<void>{
+  const old=await browser.storage.local.get(KEYS.credentials);
+  const profiles=(old[KEYS.credentials] as Record<string,{apiKey:string;model:string;endpoint:string}>|undefined)??{};
+  await browser.storage.local.set({[KEYS.credentials]:{...profiles,[provider]:{apiKey,model,endpoint}},[KEYS.provider]:provider});
 }

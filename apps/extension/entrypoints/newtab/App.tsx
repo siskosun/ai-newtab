@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
-import { DEFAULT_MODEL, DEFAULT_BLOCKED_SITES, type HomepageModel } from "@homepage/agent-core";
+import { DEFAULT_MODEL, DEFAULT_BLOCKED_SITES, DEFAULT_PROVIDER, type ProviderId } from "@homepage/agent-core";
 import { DEFAULT_REBUILD_INTERVAL_HOURS } from "@/lib/auto-rebuild";
 import { BUILD_STEPS } from "@/lib/protocol";
-import { KEYS, extensionStore, loadHomepage, loadSettings, saveSetting } from "@/lib/storage";
+import { KEYS, extensionStore, loadHomepage, loadSettings, saveSetting, saveProviderConfiguration } from "@/lib/storage";
 import { toRenderable } from "@/lib/transpile";
 import { ApiKeySetup } from "./components/ApiKeySetup";
 import { BuildProgress } from "./components/BuildProgress";
@@ -16,7 +16,9 @@ export default function App() {
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [systemPrompt, setSystemPrompt] = useState("");
   const [blockedSites, setBlockedSites] = useState<string[]>(DEFAULT_BLOCKED_SITES);
-  const [model, setModel] = useState<HomepageModel>(DEFAULT_MODEL);
+  const [model, setModel] = useState<string>(DEFAULT_MODEL);
+  const [provider,setProvider]=useState<ProviderId>(DEFAULT_PROVIDER);
+  const [endpoint,setEndpoint]=useState("");
   const [autoRebuild, setAutoRebuild] = useState(true);
   const [intervalHours, setIntervalHours] = useState(DEFAULT_REBUILD_INTERVAL_HOURS);
   /** Transpiled homepage, ready for Sandpack. */
@@ -50,6 +52,8 @@ export default function App() {
         setSystemPrompt(settings.systemPrompt);
         setBlockedSites(settings.blockedSites);
         setModel(settings.model);
+        setProvider(settings.provider);
+        setEndpoint(settings.endpoint);
         setAutoRebuild(settings.autoRebuild);
         setIntervalHours(settings.rebuildIntervalHours ?? DEFAULT_REBUILD_INTERVAL_HOURS);
         setResumable(activeSession ?? null);
@@ -60,15 +64,16 @@ export default function App() {
     })();
   }, []);
 
-  const saveKey = useCallback(async (key: string) => {
-    await saveSetting("apiKey", key);
-    setApiKey(key);
+  const saveKey = useCallback(async (key: string, chosenProvider:ProviderId, chosenModel:string) => {
+    await saveProviderConfiguration(chosenProvider,key,chosenModel,"");
+    setApiKey(key);setProvider(chosenProvider);setModel(chosenModel);
   }, []);
 
   const savePrompt = useCallback(
-    async (prompt: string, sites: string[]) => {
+    async (prompt: string, sites: string[], config:{provider:ProviderId;model:string;apiKey:string;endpoint:string}) => {
       await Promise.all([saveSetting("systemPrompt", prompt), saveSetting("blockedSites", sites)]);
       setBlockedSites(sites);
+      setProvider(config.provider);setModel(config.model);setApiKey(config.apiKey);setEndpoint(config.endpoint);
       setSystemPrompt(prompt);
       setShowSettings(false);
       setRenderedCode(null);
@@ -78,10 +83,6 @@ export default function App() {
   );
 
   // These persist immediately; the worker reads them on its next heartbeat or build.
-  const changeModel = useCallback(async (next: HomepageModel) => {
-    setModel(next);
-    await saveSetting("model", next);
-  }, []);
   const toggleAutoRebuild = useCallback(async (next: boolean) => {
     setAutoRebuild(next);
     await saveSetting("autoRebuild", next);
@@ -210,7 +211,9 @@ export default function App() {
           initialPrompt={systemPrompt}
           blockedSites={blockedSites}
           model={model}
-          onChangeModel={changeModel}
+          provider={provider}
+          apiKey={apiKey}
+          endpoint={endpoint}
           autoRebuild={autoRebuild}
           onToggleAutoRebuild={toggleAutoRebuild}
           intervalHours={intervalHours}

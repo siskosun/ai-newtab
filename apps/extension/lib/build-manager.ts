@@ -1,5 +1,5 @@
-import Anthropic from "@anthropic-ai/sdk";
-import { runHomepageBuild, type RunPhase } from "@homepage/agent-core";
+
+import { runMultiHomepageBuild, type RunPhase } from "@homepage/agent-core";
 import { rebuildIntervalMs, shouldAutoRebuild } from "./auto-rebuild";
 import { browserBridge } from "./browser-bridge";
 import {
@@ -97,7 +97,8 @@ export class BuildManager {
 
     const sessionId = await extensionStore.get<string>(KEYS.activeSessionId);
     if (sessionId) {
-      void this.startBuild({ resume: true });
+      await extensionStore.remove(KEYS.activeSessionId);
+      void this.startBuild({ resume: false });
       return;
     }
 
@@ -141,12 +142,12 @@ export class BuildManager {
       return; // single-flight: a second start just attaches.
     }
 
-    const { apiKey, systemPrompt, model } = await loadSettings();
+    const { apiKey, systemPrompt, model, provider, endpoint } = await loadSettings();
     if (!apiKey) {
       // Manual builds are gated behind the key-setup screen and auto-builds
       // require a key, so this only happens if the key was removed.
       console.warn("[BuildManager] startBuild aborted — no API key in storage");
-      const message = "No Anthropic API key found. Add your key and try again.";
+      const message = "No model API key found. Configure the provider in Settings.";
       this.state = { ...INITIAL_BUILD_STATE, phase: "error", error: message };
       this.broadcast({ kind: "error", message });
       return;
@@ -160,22 +161,11 @@ export class BuildManager {
     console.log("[BuildManager] build started", { resume: Boolean(opts.resume) });
 
     try {
-      // The key is the user's own, read from local storage — there is no server
-      // to hide it behind. See ARCHITECTURE.md → Privacy.
-      const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
-
-      const resumeSessionId = opts.resume
-        ? await extensionStore.get<string>(KEYS.activeSessionId)
-        : undefined;
-
-      const result = await runHomepageBuild({
-        client,
+      const result = await runMultiHomepageBuild({
+        provider: { provider, model, apiKey, endpoint },
         bridge: browserBridge,
-        store: extensionStore,
         userSystemPrompt: systemPrompt,
         blockedSites: async () => (await loadSettings()).blockedSites,
-        model,
-        resumeSessionId,
         signal: this.controller.signal,
         callbacks: {
           onPhase: (phase, detail) => this.onPhase(phase, detail),
