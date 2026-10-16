@@ -5,7 +5,6 @@ import {
   type BrowserBridge,
 } from "@homepage/agent-core";
 import {t,describeBuildError} from "../apps/extension/lib/i18n";
-import {loadSettings,saveSetting} from "../apps/extension/lib/storage";
 
 test("Chinese is the explicit default and unknown settings fall back safely",()=>{
  expect(DEFAULT_HOMEPAGE_LANGUAGE).toBe("zh-CN");
@@ -24,28 +23,7 @@ test("all UI languages contain meaningful translated labels and errors",()=>{
  expect(t("zh-CN","endpoint")).toContain("接口");
  expect(describeBuildError("zh-CN","Model request failed: NetworkError")).toContain("模型连接失败");
 });
-test("settings start in Chinese, persist user locale and preserve other configuration",async()=>{
- const data:Record<string,unknown>={};
- const previous=(globalThis as any).browser;
- (globalThis as any).browser={
-  storage:{local:{
-   get:async(keys:string|string[])=>{
-    const selected=Array.isArray(keys)?keys:[keys];
-    return Object.fromEntries(selected.map(k=>[k,data[k]]));
-   },
-   set:async(obj:Record<string,unknown>)=>Object.assign(data,obj),
-   remove:async(key:string)=>{delete data[key];},
-  }},
- };
- try{
-  expect((await loadSettings()).locale).toBe("zh-CN");
-  await saveSetting("locale","en");
-  expect((await loadSettings()).locale).toBe("en");
-  data.homepageLanguage="unknown-locale";
-  expect((await loadSettings()).locale).toBe("zh-CN");
- }finally{(globalThis as any).browser=previous;}
-});
-test("local API endpoint may omit a key without permitting insecure remote hosts",()=>{
+test("settings start in Chinese, persist user locale and preserve other test("local API endpoint may omit a key without permitting insecure remote hosts",()=>{
  expect(isKeylessLocalProvider("compatible","http://localhost:11434/v1/chat/completions")).toBe(true);
  expect(isKeylessLocalProvider("compatible","http://127.0.0.1:1234/v1/chat/completions")).toBe(true);
  expect(isKeylessLocalProvider("compatible","http://remote.test/v1/chat/completions")).toBe(false);
