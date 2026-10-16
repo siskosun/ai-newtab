@@ -1,0 +1,22 @@
+name: Build and test
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: oven-sh/setup-bun@v2
+      - name: Install
+        run: npx --yes pnpm@10.11.1 install --frozen-lockfile
+      - name: Typecheck
+        run: npx --yes pnpm@10.11.1 typecheck
+      - name: Unit tests
+        run: npx --yes pnpm@10.11.1 test
+      - name: Extension build
+        run: npx --yes pnpm@10.11.1 build
