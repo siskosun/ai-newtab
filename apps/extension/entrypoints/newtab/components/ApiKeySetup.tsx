@@ -1,16 +1,79 @@
-import {useState} from "react";
-import {PROVIDERS,providerPreset,type ProviderId} from "@homepage/agent-core";
-import {btn} from "./ui";
-export function ApiKeySetup({onSave}:{onSave:(key:string,provider:ProviderId,model:string)=>void}){
- const [provider,setProvider]=useState<ProviderId>("openai");
- const [model,setModel]=useState<string>(providerPreset("openai").model);
- const [key,setKey]=useState("");
- return <div style={{maxWidth:540,margin:"12vh auto",padding:24,fontFamily:"system-ui"}}>
- <h1>Connect your AI provider</h1><p>Choose a model provider. Your API key stays in Chrome local storage. Your browsing excerpts are sent to its API when you rebuild.</p>
- <select value={provider} onChange={e=>{const p=e.target.value as ProviderId;setProvider(p);setModel(providerPreset(p).model);setKey("")}} style={{display:"block",padding:10,width:"100%",marginBottom:12}}>{PROVIDERS.filter(p=>p.id!=="compatible").map(p=><option key={p.id} value={p.id}>{p.label}</option>)}</select>
- <input value={model} onChange={e=>setModel(e.target.value)} placeholder="Model ID" style={{display:"block",width:"100%",boxSizing:"border-box",padding:10,marginBottom:12}}/>
- <input type="password" autoComplete="off" value={key} onChange={e=>setKey(e.target.value)} placeholder="API key" style={{display:"block",width:"100%",boxSizing:"border-box",padding:10}}/>
- <button style={{...btn,marginTop:14}} disabled={!key.trim()||!model.trim()} onClick={()=>onSave(key.trim(),provider,model.trim())}>Save provider</button>
- <p style={{fontSize:12,color:"#666"}}>For custom OpenAI-compatible endpoints, first connect a provider then open Settings.</p>
- </div>;
+import { useState } from "react";
+import {
+  PROVIDERS, HOMEPAGE_LANGUAGES, providerPreset,
+  type ProviderId, type HomepageLanguage,
+} from "@homepage/agent-core";
+import { t } from "@/lib/i18n";
+import { btn } from "./ui";
+
+const inputStyle = {
+  display: "block" as const, padding: 10, width: "100%",
+  boxSizing: "border-box" as const, marginTop: 7, marginBottom: 13,
+};
+
+export function ApiKeySetup({locale,onChangeLocale,onSave}: {
+  locale: HomepageLanguage;
+  onChangeLocale: (locale: HomepageLanguage) => Promise<void>;
+  onSave: (key: string, provider: ProviderId, model: string, endpoint: string) => Promise<void>;
+}) {
+  const [provider,setProvider] = useState<ProviderId>("openai");
+  const [model,setModel] = useState(providerPreset("openai").model);
+  const [key,setKey] = useState("");
+  const [endpoint,setEndpoint] = useState("");
+  const [error,setError] = useState("");
+  const [saving,setSaving] = useState(false);
+
+  async function save() {
+    if (!model.trim()) {setError(t(locale,"modelRequired"));return;}
+    if (provider === "compatible" && !endpoint.trim()) {setError(t(locale,"endpointRequired"));return;}
+    const localWithoutKey = provider === "compatible" &&
+      /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\//.test(endpoint);
+    if (!key.trim() && !localWithoutKey) {setError(t(locale,"keyRequired"));return;}
+    setSaving(true);
+    setError("");
+    try {await onSave(key.trim(),provider,model.trim(),endpoint.trim());}
+    catch(cause) {setError(t(locale,"errorGeneric")+String(cause));}
+    finally {setSaving(false);}
+  }
+
+  return (
+    <div style={{ maxWidth: 540, margin: "9vh auto", padding: 24, fontFamily: "system-ui, 'Noto Sans CJK SC', 'Microsoft YaHei', sans-serif" }}>
+      <label style={{ display: "block", marginBottom: 20 }}>
+        {t(locale,"language")}
+        <select value={locale} onChange={(e) => void onChangeLocale(e.target.value as HomepageLanguage)} style={inputStyle}>
+          {HOMEPAGE_LANGUAGES.map((lang) => <option value={lang.id} key={lang.id}>{lang.label}</option>)}
+        </select>
+      </label>
+      <h1>{t(locale, "connectTitle")}</h1>
+      <p style={{ color: "#555", lineHeight: 1.7 }}>{t(locale, "connectDescription")}</p>
+      <label style={{ display: "block" }}>
+        {t(locale,"provider")}
+        <select value={provider} onChange={(e) => {
+          const next=e.target.value as ProviderId;
+          setProvider(next);setModel(providerPreset(next).model);setKey("");setEndpoint("");
+        }} style={inputStyle}>
+          {PROVIDERS.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
+        </select>
+      </label>
+      <label style={{ display: "block" }}>
+        {t(locale,"modelId")}
+        <input value={model} onChange={(e)=>setModel(e.target.value)} placeholder={t(locale,"modelPlaceholder")} style={inputStyle} />
+      </label>
+      <label style={{ display: "block" }}>
+        {t(locale,"apiKey")}
+        <input type="password" autoComplete="off" value={key} onChange={(e)=>setKey(e.target.value)} placeholder={t(locale,"apiKeyPlaceholder")} style={inputStyle} />
+      </label>
+      {provider === "compatible" && (
+        <label style={{ display: "block" }}>
+          {t(locale,"endpoint")}
+          <input value={endpoint} onChange={(e)=>setEndpoint(e.target.value)} placeholder={t(locale,"endpointPlaceholder")} style={inputStyle} />
+        </label>
+      )}
+      <button style={{...btn,marginTop:14}} disabled={saving} onClick={() => void save()}>
+        {t(locale,"saveProvider")}
+      </button>
+      {error && <p role="alert" style={{ color: "#c22" }}>{error}</p>}
+      <p style={{fontSize:12,color:"#666",marginTop:20}}>{t(locale,"credentialNote")}</p>
+    </div>
+  );
 }

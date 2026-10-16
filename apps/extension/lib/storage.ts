@@ -1,4 +1,4 @@
-import { DEFAULT_PROVIDER, DEFAULT_PROVIDER_MODEL, providerPreset, isProviderId, type ProviderId } from "@homepage/agent-core";
+import { DEFAULT_PROVIDER, DEFAULT_PROVIDER_MODEL, providerPreset, isProviderId, DEFAULT_HOMEPAGE_LANGUAGE, normalizeHomepageLanguage, type HomepageLanguage, type ProviderId } from "@homepage/agent-core";
 import {
   DEFAULT_BLOCKED_SITES,
   STORAGE_KEYS as AGENT_KEYS,
@@ -20,6 +20,7 @@ export const KEYS = {
   provider: "provider",
   endpoint: "endpoint",
   credentials: "providerCredentials",
+  locale: "homepageLanguage",
   autoRebuild: "autoRebuild",
   /** ISO timestamp of the last auto-build *attempted* (success or not). */
   lastAutoBuildAttempt: "lastAutoBuildAttempt",
@@ -42,6 +43,7 @@ export interface Settings {
   model: string;
   provider: ProviderId;
   endpoint: string;
+  locale: HomepageLanguage;
   /** Unset means on — auto-rebuild is opt-out. */
   autoRebuild: boolean;
   rebuildIntervalHours: number | null;
@@ -70,6 +72,7 @@ export async function loadSettings(): Promise<Settings> {
     KEYS.provider,
     KEYS.endpoint,
     KEYS.credentials,
+    KEYS.locale,
     KEYS.autoRebuild,
     KEYS.rebuildIntervalHours,
   ]);
@@ -86,12 +89,13 @@ export async function loadSettings(): Promise<Settings> {
     model: selected?.model ?? (provider === DEFAULT_PROVIDER ? (legacyModel ?? DEFAULT_PROVIDER_MODEL) : providerPreset(provider).model),
     provider,
     endpoint: selected?.endpoint ?? (s[KEYS.endpoint] as string | undefined) ?? "",
+    locale: normalizeHomepageLanguage(s[KEYS.locale] ?? DEFAULT_HOMEPAGE_LANGUAGE),
     autoRebuild: s[KEYS.autoRebuild] !== false,
     rebuildIntervalHours: (s[KEYS.rebuildIntervalHours] as number | undefined) ?? null,
   };
 }
 
-export async function saveSetting<K extends "apiKey" | "systemPrompt" | "blockedSites" | "model" | "provider" | "endpoint" | "autoRebuild" | "rebuildIntervalHours">(
+export async function saveSetting<K extends "apiKey" | "systemPrompt" | "blockedSites" | "model" | "provider" | "endpoint" | "locale" | "autoRebuild" | "rebuildIntervalHours">(
   key: K,
   value: Settings[K],
 ): Promise<void> {

@@ -1,15 +1,18 @@
 import { useEffect, useRef, useState } from "react";
+import type { HomepageLanguage } from "@homepage/agent-core";
+import { t } from "@/lib/i18n";
 import { BUILD_STEPS, LOG_RETENTION, type BuildState } from "@/lib/protocol";
 
-/** Full-screen build view: the step list on the left, live narration and log on the right. */
+const stepLabels = [
+  "stepSetup", "stepHistory", "stepScraping", "stepAnalyzing", "stepWriting",
+] as const;
+
 export function BuildProgress({
-  state,
-  onCancel,
-  onBack,
+  state, onCancel, onBack, locale,
 }: {
   state: BuildState;
+  locale: HomepageLanguage;
   onCancel: () => void;
-  /** Present when a build is running over an existing homepage — offers a way back to it. */
   onBack?: () => void;
 }) {
   const { stepIndex, detail, narration, logs } = state;
@@ -18,11 +21,9 @@ export function BuildProgress({
   const logRef = useRef<HTMLPreElement>(null);
 
   useEffect(() => {
-    const t = setInterval(() => setElapsed((e) => e + 1), 1000);
-    return () => clearInterval(t);
+    const timer = setInterval(() => setElapsed((previous) => previous + 1), 1000);
+    return () => clearInterval(timer);
   }, []);
-
-  // Keep the streaming panels pinned to their latest line.
   useEffect(() => {
     if (narrRef.current) narrRef.current.scrollTop = narrRef.current.scrollHeight;
   }, [narration]);
@@ -30,61 +31,52 @@ export function BuildProgress({
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
   }, [logs]);
 
-  const mm = String(Math.floor(elapsed / 60)).padStart(2, "0");
-  const ss = String(elapsed % 60).padStart(2, "0");
+  const minutes = String(Math.floor(elapsed / 60)).padStart(2, "0");
+  const seconds = String(elapsed % 60).padStart(2, "0");
+  const readableDetail = state.phase === "scraping" && /^\d+$/.test(detail)
+    ? detail + " " + t(locale, "scrapedUnit")
+    : detail;
 
   return (
     <div className="build">
       <div className="build-left">
         <div className="build-panel">
           <div className="build-top">
-            <span className="build-title">Building your homepage</span>
-            <span className="build-elapsed">
-              {mm}:{ss}
-            </span>
+            <span className="build-title">{t(locale, "progressTitle")}</span>
+            <span className="build-elapsed">{minutes}:{seconds}</span>
           </div>
-
           <ol className="build-steps">
-            {BUILD_STEPS.map((step, i) => {
-              const status = i < stepIndex ? "done" : i === stepIndex ? "active" : "pending";
+            {BUILD_STEPS.map((step, index) => {
+              const status = index < stepIndex ? "done" : index === stepIndex ? "active" : "pending";
               return (
-                <li key={step.label} className={`build-step ${status}`}>
-                  <span className="build-marker">{status === "done" ? "✓" : i + 1}</span>
+                <li key={step.label} className={"build-step " + status}>
+                  <span className="build-marker">{status === "done" ? "✓" : index + 1}</span>
                   <div className="build-step-body">
-                    <div className="build-step-label">{step.label}</div>
-                    {status === "active" && detail && <div className="build-step-detail">{detail}</div>}
+                    <div className="build-step-label">{t(locale, stepLabels[index])}</div>
+                    {status === "active" && readableDetail && <div className="build-step-detail">{readableDetail}</div>}
                   </div>
                 </li>
               );
             })}
           </ol>
-
           <div style={{ display: "flex", gap: 10 }}>
-            <button className="build-cancel" onClick={onCancel}>
-              Cancel
-            </button>
-            {onBack && (
-              <button className="build-cancel" style={{ background: "transparent" }} onClick={onBack}>
-                ← Back to homepage
-              </button>
-            )}
+            <button className="build-cancel" onClick={onCancel}>{t(locale, "cancelBuild")}</button>
+            {onBack && <button className="build-cancel" style={{ background: "transparent" }} onClick={onBack}>
+              ← {t(locale, "backHome")}
+            </button>}
           </div>
         </div>
       </div>
-
       <div className="build-right">
         <div className="build-panel">
-          <div className="build-eyebrow">Agent</div>
+          <div className="build-eyebrow">{t(locale, "agent")}</div>
           <div className="build-narration" ref={narrRef}>
-            {narration || "Warming up — reading what you’ve been browsing…"}
+            {narration || t(locale, "progressWarming")}
           </div>
-
           {logs.length > 0 && (
             <>
-              <div className="build-eyebrow build-log-label">Activity log</div>
-              <pre className="build-log" ref={logRef}>
-                {logs.slice(-LOG_RETENTION).join("\n")}
-              </pre>
+              <div className="build-eyebrow build-log-label">{t(locale, "activity")}</div>
+              <pre className="build-log" ref={logRef}>{logs.slice(-LOG_RETENTION).join("\n")}</pre>
             </>
           )}
         </div>
