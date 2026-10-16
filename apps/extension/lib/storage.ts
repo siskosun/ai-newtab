@@ -2,7 +2,6 @@ import { DEFAULT_PROVIDER, DEFAULT_PROVIDER_MODEL, providerPreset, isProviderId,
 import {
   DEFAULT_BLOCKED_SITES,
   STORAGE_KEYS as AGENT_KEYS,
-  type HomepageModel,
   type KVStore,
 } from "@homepage/agent-core";
 
@@ -40,7 +39,7 @@ export interface Settings {
   apiKey: string | null;
   systemPrompt: string;
   blockedSites: string[];
-  model: HomepageModel;
+  model: string;
   provider: ProviderId;
   endpoint: string;
   /** Unset means on — auto-rebuild is opt-out. */
