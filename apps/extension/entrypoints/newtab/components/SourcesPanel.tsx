@@ -31,6 +31,7 @@ export function SourcesPanel({
                   style={{ color: "#0969da", fontWeight: 600, textDecoration: "none", overflowWrap: "anywhere" }}>
                   {source.title || new URL(source.url).hostname}
                 </a>
+                {source.origin && <div style={{ fontSize: 12, color: "#555", marginTop: 5 }}>{t(locale, source.origin === "followed" ? "followedOrigin" : "historyOrigin")}</div>}
                 <div style={{ fontSize: 12, color: "#555", overflowWrap: "anywhere", marginTop: 5 }}>{source.url}</div>
                 {time && <div style={{ fontSize: 12, color: "#666", marginTop: 5 }}>{t(locale, "readAt")} {time}</div>}
               </li>

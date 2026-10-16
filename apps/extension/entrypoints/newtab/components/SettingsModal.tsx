@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   PROVIDERS, HOMEPAGE_LANGUAGES, providerPreset,
-  normalizeBlockList, isKeylessLocalProvider, type ProviderId, type HomepageLanguage,
+  normalizeBlockList, normalizeFollowedSites, isKeylessLocalProvider, type ProviderId, type HomepageLanguage,
 } from "@homepage/agent-core";
 import { REBUILD_INTERVAL_CHOICES } from "@/lib/auto-rebuild";
 import { t } from "@/lib/i18n";
@@ -16,6 +16,7 @@ export interface ProviderConfig {
 export interface SettingsModalProps {
   initialPrompt: string;
   blockedSites: string[];
+  followedSites: string[];
   provider: ProviderId;
   model: string;
   apiKey: string;
@@ -26,7 +27,7 @@ export interface SettingsModalProps {
   intervalHours: number;
   onChangeInterval: (hours: number) => void;
   onClose: () => void;
-  onSave: (prompt: string, sites: string[], config: ProviderConfig, language: HomepageLanguage) => Promise<void>;
+  onSave: (prompt: string, sites: string[], followed: string[], config: ProviderConfig, language: HomepageLanguage) => Promise<void>;
 }
 
 const inputStyle = {
@@ -35,12 +36,13 @@ const inputStyle = {
 };
 
 export function SettingsModal({
-  initialPrompt, blockedSites, provider, model, apiKey, endpoint, locale,
+  initialPrompt, blockedSites, followedSites, provider, model, apiKey, endpoint, locale,
   autoRebuild, onToggleAutoRebuild, intervalHours, onChangeInterval,
   onClose, onSave,
 }: SettingsModalProps) {
   const [draft, setDraft] = useState(initialPrompt);
   const [blockedDraft, setBlockedDraft] = useState(blockedSites.join("\n"));
+  const [followedDraft, setFollowedDraft] = useState(followedSites.join("\n"));
   const [providerDraft, setProviderDraft] = useState<ProviderId>(provider);
   const [languageDraft, setLanguageDraft] = useState<HomepageLanguage>(locale);
   const [modelDraft, setModelDraft] = useState(model);
@@ -71,10 +73,16 @@ export function SettingsModal({
     if (providerDraft === "compatible" && !endpointDraft.trim()) { setError(t(languageDraft, "endpointRequired")); return; }
     const localWithoutKey = isKeylessLocalProvider(providerDraft, endpointDraft);
     if (!keyDraft.trim() && !localWithoutKey) { setError(t(languageDraft, "keyRequired")); return; }
+    const normalizedBlocked = normalizeBlockList(blockedDraft.split("\n"));
+    const followed = normalizeFollowedSites(followedDraft.split("\n"), normalizedBlocked);
+    if (followed.rejected.length) {
+      setError(t(languageDraft, "followedInvalid") + " " + followed.rejected.slice(0, 4).map(item => item.input).join(", "));
+      return;
+    }
     setSaving(true);
     setError("");
     try {
-      await onSave(draft, normalizeBlockList(blockedDraft.split("\n")), {
+      await onSave(draft, normalizedBlocked, followed.sites, {
         provider: providerDraft, model: modelDraft.trim(),
         apiKey: keyDraft.trim(), endpoint: endpointDraft.trim(),
       }, languageDraft);
@@ -128,6 +136,11 @@ export function SettingsModal({
           {t(languageDraft, "instructions")}
           <textarea value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={t(languageDraft, "instructionsPlaceholder")} style={{ ...inputStyle, height: 85 }} />
         </label>
+        <label style={{ display: "block", marginTop: 14 }}>
+          {t(languageDraft, "followedSites")}
+          <textarea aria-label={t(languageDraft, "followedSites")} value={followedDraft} onChange={(e) => setFollowedDraft(e.target.value)} placeholder={t(languageDraft, "followedPlaceholder")} style={{ ...inputStyle, height: 95 }} />
+        </label>
+        <p style={{ fontSize: 12, color: "#666", lineHeight: 1.65 }}>{t(languageDraft, "followedHelp")}</p>
         <label style={{ display: "block", marginTop: 14 }}>
           {t(languageDraft, "blockedSites")}
           <textarea value={blockedDraft} onChange={(e) => setBlockedDraft(e.target.value)} style={{ ...inputStyle, height: 90 }} />

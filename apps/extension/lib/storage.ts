@@ -1,6 +1,7 @@
 import { DEFAULT_PROVIDER, DEFAULT_PROVIDER_MODEL, providerPreset, isProviderId, DEFAULT_HOMEPAGE_LANGUAGE, normalizeHomepageLanguage, type HomepageLanguage, type ProviderId } from "@homepage/agent-core";
 import {
   DEFAULT_BLOCKED_SITES,
+  normalizeFollowedSites,
   STORAGE_KEYS as AGENT_KEYS,
   type KVStore,
 } from "@homepage/agent-core";
@@ -16,6 +17,7 @@ export const KEYS = {
   homepage: "homepageData",
   systemPrompt: "systemPrompt",
   blockedSites: "blockedSites",
+  followedSites: "followedSites",
   model: "model",
   provider: "provider",
   endpoint: "endpoint",
@@ -42,6 +44,7 @@ export interface Settings {
   apiKey: string | null;
   systemPrompt: string;
   blockedSites: string[];
+  followedSites: string[];
   model: string;
   provider: ProviderId;
   endpoint: string;
@@ -70,6 +73,7 @@ export async function loadSettings(): Promise<Settings> {
     KEYS.apiKey,
     KEYS.systemPrompt,
     KEYS.blockedSites,
+    KEYS.followedSites,
     KEYS.model,
     KEYS.provider,
     KEYS.endpoint,
@@ -87,6 +91,7 @@ export async function loadSettings(): Promise<Settings> {
     apiKey: selected?.apiKey ?? (provider === DEFAULT_PROVIDER ? legacyKey : null),
     systemPrompt: (s[KEYS.systemPrompt] as string | undefined) ?? "",
     blockedSites: (s[KEYS.blockedSites] as string[] | undefined) ?? [...DEFAULT_BLOCKED_SITES],
+    followedSites: normalizeFollowedSites(Array.isArray(s[KEYS.followedSites]) ? s[KEYS.followedSites] as string[] : [], (s[KEYS.blockedSites] as string[] | undefined) ?? DEFAULT_BLOCKED_SITES).sites,
     // Fall back if a stored model is no longer offered.
     model: selected?.model ?? (provider === DEFAULT_PROVIDER ? (legacyModel ?? DEFAULT_PROVIDER_MODEL) : providerPreset(provider).model),
     provider,
@@ -97,7 +102,7 @@ export async function loadSettings(): Promise<Settings> {
   };
 }
 
-export async function saveSetting<K extends "apiKey" | "systemPrompt" | "blockedSites" | "model" | "provider" | "endpoint" | "locale" | "autoRebuild" | "rebuildIntervalHours">(
+export async function saveSetting<K extends "apiKey" | "systemPrompt" | "blockedSites" | "followedSites" | "model" | "provider" | "endpoint" | "locale" | "autoRebuild" | "rebuildIntervalHours">(
   key: K,
   value: Settings[K],
 ): Promise<void> {

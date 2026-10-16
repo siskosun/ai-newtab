@@ -32,6 +32,7 @@ export default function App() {
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [systemPrompt, setSystemPrompt] = useState("");
   const [blockedSites, setBlockedSites] = useState<string[]>(DEFAULT_BLOCKED_SITES);
+  const [followedSites, setFollowedSites] = useState<string[]>([]);
   const [model, setModel] = useState<string>(DEFAULT_PROVIDER_MODEL);
   const [provider, setProvider] = useState<ProviderId>(DEFAULT_PROVIDER);
   const [endpoint, setEndpoint] = useState("");
@@ -69,6 +70,7 @@ export default function App() {
         setApiKey(settings.apiKey);
         setSystemPrompt(settings.systemPrompt);
         setBlockedSites(settings.blockedSites);
+        setFollowedSites(settings.followedSites);
         setModel(settings.model);
         setProvider(settings.provider);
         setEndpoint(settings.endpoint);
@@ -100,16 +102,18 @@ export default function App() {
   }, []);
 
   const saveConfig = useCallback(async (
-    prompt: string, sites: string[], config: ModelConfig, nextLanguage: HomepageLanguage,
+    prompt: string, sites: string[], followed: string[], config: ModelConfig, nextLanguage: HomepageLanguage,
   ) => {
     await Promise.all([
       saveSetting("systemPrompt", prompt),
       saveSetting("blockedSites", sites),
+      saveSetting("followedSites", followed),
       saveSetting("locale", nextLanguage),
       saveProviderConfiguration(config.provider, config.apiKey, config.model, config.endpoint),
     ]);
     setSystemPrompt(prompt);
     setBlockedSites(sites);
+    setFollowedSites(followed);
     setProvider(config.provider);
     setModel(config.model);
     setApiKey(config.apiKey);
@@ -170,6 +174,7 @@ export default function App() {
         <SettingsModal
           initialPrompt={systemPrompt}
           blockedSites={blockedSites}
+          followedSites={followedSites}
           model={model} provider={provider} apiKey={apiKey ?? ""} endpoint={endpoint}
           locale={locale} autoRebuild={autoRebuild}
           onToggleAutoRebuild={toggleAutoRebuild}
@@ -240,6 +245,7 @@ export default function App() {
         <SettingsModal
           initialPrompt={systemPrompt}
           blockedSites={blockedSites}
+          followedSites={followedSites}
           model={model} provider={provider} apiKey={apiKey ?? ""} endpoint={endpoint}
           locale={locale} autoRebuild={autoRebuild}
           onToggleAutoRebuild={toggleAutoRebuild}
