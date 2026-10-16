@@ -12,3 +12,5 @@ export * from "./multi-orchestrator";
 export * from "./language";
 
 export * from "./followed-sites";
+
+export * from "./incremental";

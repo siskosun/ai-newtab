@@ -38,6 +38,8 @@ export default function App() {
   const [endpoint, setEndpoint] = useState("");
   const [locale, setLocale] = useState<HomepageLanguage>(DEFAULT_HOMEPAGE_LANGUAGE);
   const [autoRebuild, setAutoRebuild] = useState(true);
+  const [incrementalUpdates, setIncrementalUpdates] = useState(true);
+  const [lastCheck, setLastCheck] = useState<{checkedAt:string;unchanged:boolean}|null>(null);
   const [intervalHours, setIntervalHours] = useState(DEFAULT_REBUILD_INTERVAL_HOURS);
   const [renderedCode, setRenderedCode] = useState<string | null>(null);
   const [resumable, setResumable] = useState<string | null>(null);
@@ -47,9 +49,10 @@ export default function App() {
   const [viewProgress, setViewProgress] = useState(false);
   const [dismissedError, setDismissedError] = useState<string | null>(null);
 
-  const { state, build, cancel } = useHomepageBuild((code, sourcesRead) => {
+  const { state, build, cancel } = useHomepageBuild((code, sourcesRead, result) => {
     setRenderedCode(toRenderable(code));
     setSources(sourcesRead);
+    setLastCheck({checkedAt:result.checkedAt??new Date().toISOString(),unchanged:result.unchanged});
   });
 
   useEffect(() => {
@@ -76,11 +79,15 @@ export default function App() {
         setEndpoint(settings.endpoint);
         setLocale(settings.locale);
         setAutoRebuild(settings.autoRebuild);
+        setIncrementalUpdates(settings.incrementalUpdates);
         setIntervalHours(settings.rebuildIntervalHours ?? DEFAULT_REBUILD_INTERVAL_HOURS);
         setResumable(activeSession ?? null);
         if (homepage?.code) {
           setRenderedCode(toRenderable(homepage.code));
           setSources(homepage.sources ?? []);
+          if(homepage.lastCheckedAt) {
+            setLastCheck({checkedAt:homepage.lastCheckedAt,unchanged:homepage.lastCheckUnchanged===true});
+          }
         }
       } finally {
         setLoading(false);
@@ -128,6 +135,10 @@ export default function App() {
   const toggleAutoRebuild = useCallback(async (next: boolean) => {
     setAutoRebuild(next);
     await saveSetting("autoRebuild", next);
+  }, []);
+  const toggleIncrementalUpdates = useCallback(async (next: boolean) => {
+    setIncrementalUpdates(next);
+    await saveSetting("incrementalUpdates", next);
   }, []);
   const changeInterval = useCallback(async (next: number) => {
     setIntervalHours(next);
@@ -178,6 +189,8 @@ export default function App() {
           model={model} provider={provider} apiKey={apiKey ?? ""} endpoint={endpoint}
           locale={locale} autoRebuild={autoRebuild}
           onToggleAutoRebuild={toggleAutoRebuild}
+          incrementalUpdates={incrementalUpdates}
+          onToggleIncrementalUpdates={toggleIncrementalUpdates}
           intervalHours={intervalHours} onChangeInterval={changeInterval}
           onClose={() => setShowSettings(false)} onSave={saveConfig}
         />
@@ -237,6 +250,16 @@ export default function App() {
         </div>
       )}
 
+      {lastCheck?.unchanged && !state.running && (
+        <div role="status" style={{
+          position:"fixed",top:66,right:20,zIndex:999,
+          maxWidth:"min(450px,calc(100vw - 40px))",
+          padding:"7px 11px",borderRadius:6,background:"rgba(255,255,255,.96)",
+          boxShadow:"0 1px 6px rgba(0,0,0,.14)",fontFamily:"system-ui",fontSize:12,color:"#355",
+        }}>
+          {t(locale,"incrementalUnchanged")} · {new Date(lastCheck.checkedAt).toLocaleString(locale)}
+        </div>
+      )}
       <HomepagePreview code={renderedCode} locale={locale} />
 
       {showSources && <SourcesPanel sources={sources} locale={locale} onClose={() => setShowSources(false)} />}
@@ -249,6 +272,8 @@ export default function App() {
           model={model} provider={provider} apiKey={apiKey ?? ""} endpoint={endpoint}
           locale={locale} autoRebuild={autoRebuild}
           onToggleAutoRebuild={toggleAutoRebuild}
+          incrementalUpdates={incrementalUpdates}
+          onToggleIncrementalUpdates={toggleIncrementalUpdates}
           intervalHours={intervalHours} onChangeInterval={changeInterval}
           onClose={() => setShowSettings(false)} onSave={saveConfig}
         />

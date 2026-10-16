@@ -46,7 +46,7 @@ export type BuildMsg =
   | { kind: "phase"; phase: RunPhase; stepIndex: number; detail: string }
   | { kind: "text"; chunk: string } // narration delta
   | { kind: "log"; line: string }
-  | { kind: "done"; code: string; sources?: ReadSource[] } // homepage saved; carries the raw TSX
+  | { kind: "done"; code: string; sources?: ReadSource[]; unchanged?: boolean; checkedAt?: string } // homepage saved; carries the raw TSX
   | { kind: "error"; message: string };
 
 /**

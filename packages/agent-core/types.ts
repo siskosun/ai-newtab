@@ -123,6 +123,12 @@ export interface ReadSource {
 export interface HomepageBuildResult {
   /** Omitted by legacy agent runs that predate provenance capture. */
   sources?: ReadSource[];
+  /** SHA-256 of effective source content plus all output-affecting settings. */
+  fingerprint?: string;
+  /** True only if the validated cached homepage was reused without an API call. */
+  unchanged?: boolean;
+  /** Time of the latest completed check, not publication time. */
+  checkedAt?: string;
   code: string;
   sessionId: string;
   /** Where the code came from: a session output file, or a fenced block in the final message. */

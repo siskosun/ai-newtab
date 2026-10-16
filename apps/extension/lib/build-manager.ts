@@ -11,7 +11,7 @@ import {
   type BuildState,
   type PageMsg,
 } from "./protocol";
-import { KEYS, extensionStore, loadHomepage, loadSettings, saveHomepage } from "./storage";
+import { KEYS, extensionStore, loadHomepage, loadSettings, saveHomepage, markHomepageUnchanged } from "./storage";
 
 type Port = Parameters<Parameters<typeof browser.runtime.onConnect.addListener>[0]>[0];
 
@@ -131,18 +131,20 @@ export class BuildManager {
     // Stamp the attempt before starting so a second wake (or a cancel/failure)
     // doesn't re-trigger it within the interval.
     await extensionStore.set(KEYS.lastAutoBuildAttempt, now.toISOString());
-    void this.startBuild({ resume: false });
+    void this.startBuild({ resume: false, incremental: settings.incrementalUpdates });
   }
 
   // ---- the build -----------------------------------------------------------
 
-  async startBuild(opts: { resume?: boolean } = {}) {
+  async startBuild(opts: { resume?: boolean; incremental?: boolean } = {}) {
     if (this.running) {
       console.log("[BuildManager] startBuild ignored — a build is already running");
       return; // single-flight: a second start just attaches.
     }
 
-    const { apiKey, systemPrompt, model, provider, endpoint, locale, followedSites } = await loadSettings();
+    const settings=await loadSettings();
+    const { apiKey, systemPrompt, model, provider, endpoint, locale, followedSites } = settings;
+    const previous = opts.incremental && settings.incrementalUpdates ? await loadHomepage() : undefined;
     if (!apiKey && !isKeylessLocalProvider(provider, endpoint)) {
       // Manual builds are gated behind the key-setup screen and auto-builds
       // require a key, so this only happens if the key was removed.
@@ -168,6 +170,12 @@ export class BuildManager {
         userSystemPrompt: systemPrompt,
         blockedSites: async () => (await loadSettings()).blockedSites,
         followedSites,
+        incrementalCache: previous?.fingerprint && previous.code ? {
+          fingerprint: previous.fingerprint,
+          generatedAt: previous.timestamp,
+          code: previous.code,
+          sources: previous.sources,
+        } : undefined,
         signal: this.controller.signal,
         callbacks: {
           onPhase: (phase, detail) => this.onPhase(phase, detail),
@@ -176,13 +184,22 @@ export class BuildManager {
         },
       });
 
-      // Persist the raw TSX; the page transpiles it for preview.
-      await saveHomepage(result.code, result.sources ?? []);
+      if(this.controller?.signal.aborted)throw Error("Build cancelled.");
+      // A skipped check MUST NOT reset the successful page generation timestamp.
+      // Never persist a new fingerprint until a real model generation succeeds.
+      if(result.unchanged) {
+        if(!result.fingerprint || !result.checkedAt ||
+           !(await markHomepageUnchanged(result.fingerprint,result.checkedAt))) {
+          throw Error("Homepage cache changed during the incremental check.");
+        }
+      } else {
+        await saveHomepage(result.code,result.sources??[],result.fingerprint,result.checkedAt);
+      }
 
       this.state = { ...this.state, running: false, phase: "done" };
-      this.broadcast({ kind: "done", code: result.code, sources: result.sources ?? [] });
+      this.broadcast({ kind: "done", code: result.code, sources: result.sources ?? [], unchanged: result.unchanged??false, checkedAt:result.checkedAt });
       await this.mirror(true);
-      console.log("[BuildManager] build done", { bytes: result.code.length, source: result.source });
+      console.log("[BuildManager] build done", { bytes: result.code.length, source: result.source, modelCallSkipped:result.unchanged===true });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.state = { ...this.state, running: false, phase: "error", error: message };

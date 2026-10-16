@@ -24,6 +24,7 @@ export const KEYS = {
   credentials: "providerCredentials",
   locale: "homepageLanguage",
   autoRebuild: "autoRebuild",
+  incrementalUpdates: "incrementalUpdates",
   /** ISO timestamp of the last auto-build *attempted* (success or not). */
   lastAutoBuildAttempt: "lastAutoBuildAttempt",
   rebuildIntervalHours: "autoRebuildIntervalHours",
@@ -38,6 +39,11 @@ export interface Homepage {
   timestamp: string;
   /** Actual browser pages read during generation, not evidence of publication. */
   sources?: import("@homepage/agent-core").ReadSource[];
+  /** Hash of effective inputs for the last successfully generated code only. */
+  fingerprint?: string;
+  /** A check may have reused the old code without touching timestamp. */
+  lastCheckedAt?: string;
+  lastCheckUnchanged?: boolean;
 }
 
 export interface Settings {
@@ -51,6 +57,7 @@ export interface Settings {
   locale: HomepageLanguage;
   /** Unset means on — auto-rebuild is opt-out. */
   autoRebuild: boolean;
+  incrementalUpdates: boolean;
   rebuildIntervalHours: number | null;
 }
 
@@ -80,6 +87,7 @@ export async function loadSettings(): Promise<Settings> {
     KEYS.credentials,
     KEYS.locale,
     KEYS.autoRebuild,
+    KEYS.incrementalUpdates,
     KEYS.rebuildIntervalHours,
   ]);
   const provider = isProviderId(s[KEYS.provider]) ? s[KEYS.provider] as ProviderId : DEFAULT_PROVIDER;
@@ -98,11 +106,12 @@ export async function loadSettings(): Promise<Settings> {
     endpoint: selected?.endpoint ?? (s[KEYS.endpoint] as string | undefined) ?? "",
     locale: normalizeHomepageLanguage(s[KEYS.locale] ?? DEFAULT_HOMEPAGE_LANGUAGE),
     autoRebuild: s[KEYS.autoRebuild] !== false,
+    incrementalUpdates: s[KEYS.incrementalUpdates] !== false,
     rebuildIntervalHours: (s[KEYS.rebuildIntervalHours] as number | undefined) ?? null,
   };
 }
 
-export async function saveSetting<K extends "apiKey" | "systemPrompt" | "blockedSites" | "followedSites" | "model" | "provider" | "endpoint" | "locale" | "autoRebuild" | "rebuildIntervalHours">(
+export async function saveSetting<K extends "apiKey" | "systemPrompt" | "blockedSites" | "followedSites" | "model" | "provider" | "endpoint" | "locale" | "autoRebuild" | "incrementalUpdates" | "rebuildIntervalHours">(
   key: K,
   value: Settings[K],
 ): Promise<void> {
@@ -113,9 +122,26 @@ export async function loadHomepage(): Promise<Homepage | undefined> {
   return extensionStore.get<Homepage>(KEYS.homepage);
 }
 
-export async function saveHomepage(code: string, sources: import("@homepage/agent-core").ReadSource[] = []): Promise<void> {
-  const homepage: Homepage = { code, timestamp: new Date().toISOString(), sources };
+export async function saveHomepage(
+  code: string, sources: import("@homepage/agent-core").ReadSource[] = [],
+  fingerprint?: string, checkedAt?: string,
+): Promise<void> {
+  const now = checkedAt ?? new Date().toISOString();
+  const homepage: Homepage = {
+    code, timestamp: now, sources, fingerprint,
+    lastCheckedAt: now, lastCheckUnchanged: false,
+  };
   await extensionStore.set(KEYS.homepage, homepage);
+}
+
+/** Preserve the last generated code and its original generation time on no-change. */
+export async function markHomepageUnchanged(fingerprint: string, checkedAt: string):Promise<boolean> {
+  const current=await loadHomepage();
+  if(!current?.code || !current.fingerprint || current.fingerprint!==fingerprint)return false;
+  await extensionStore.set(KEYS.homepage, {
+    ...current,lastCheckedAt:checkedAt,lastCheckUnchanged:true,
+  } satisfies Homepage);
+  return true;
 }
 
 export async function saveProviderConfiguration(provider: ProviderId, apiKey:string, model:string, endpoint:string):Promise<void>{
