@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   PROVIDERS, HOMEPAGE_LANGUAGES, providerPreset,
-  normalizeBlockList, type ProviderId, type HomepageLanguage,
+  normalizeBlockList, isKeylessLocalProvider, type ProviderId, type HomepageLanguage,
 } from "@homepage/agent-core";
 import { REBUILD_INTERVAL_CHOICES } from "@/lib/auto-rebuild";
 import { t } from "@/lib/i18n";
@@ -69,8 +69,7 @@ export function SettingsModal({
   async function save() {
     if (!modelDraft.trim()) { setError(t(languageDraft, "modelRequired")); return; }
     if (providerDraft === "compatible" && !endpointDraft.trim()) { setError(t(languageDraft, "endpointRequired")); return; }
-    const localWithoutKey = providerDraft === "compatible" &&
-      /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\//.test(endpointDraft);
+    const localWithoutKey = isKeylessLocalProvider(providerDraft, endpointDraft);
     if (!keyDraft.trim() && !localWithoutKey) { setError(t(languageDraft, "keyRequired")); return; }
     setSaving(true);
     setError("");

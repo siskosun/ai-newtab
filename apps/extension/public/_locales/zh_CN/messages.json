@@ -1,0 +1,8 @@
+{
+  "appName": {
+    "message": "AI 个性化首页"
+  },
+  "appDescription": {
+    "message": "根据浏览记录生成个性化新标签页，支持多家 AI 模型与中文摘要。"
+  }
+}

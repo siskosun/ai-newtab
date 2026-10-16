@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   DEFAULT_PROVIDER_MODEL, DEFAULT_BLOCKED_SITES, DEFAULT_PROVIDER,
-  type ProviderId, type HomepageLanguage,
+  type ProviderId, type HomepageLanguage, isKeylessLocalProvider,
 } from "@homepage/agent-core";
 import { DEFAULT_REBUILD_INTERVAL_HOURS } from "@/lib/auto-rebuild";
 import { BUILD_STEPS } from "@/lib/protocol";
@@ -122,7 +122,7 @@ export default function App() {
   }, []);
 
   if (loading) return <div style={{ padding: 20, textAlign: "center" }}>{t(locale, "loading")}</div>;
-  if (!apiKey) return (
+  if (!apiKey && !isKeylessLocalProvider(provider, endpoint)) return (
     <ApiKeySetup locale={locale} onChangeLocale={changeLanguage} onSave={saveKey} />
   );
 

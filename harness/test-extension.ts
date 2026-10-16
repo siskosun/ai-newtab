@@ -152,9 +152,13 @@ try {
   const bodyText = await page.evaluate<string>("document.body.innerText");
   check(
     "renders the API-key setup screen",
-    /Connect your Anthropic API key/i.test(bodyText),
+    /连接 AI 模型服务/.test(bodyText),
     bodyText.split("\n").filter(Boolean)[0]?.slice(0, 50),
   );
+
+  const lang = await page.evaluate<string>("document.documentElement.lang");
+  check("new tab defaults to Simplified Chinese", lang === "zh-CN", lang);
+  check("language picker is visible on first run", /简体中文/.test(bodyText));
 
   // Open a build port, send one message, and collect replies for a moment.
   const talk = (msg: object, waitMs: number) =>
@@ -180,7 +184,7 @@ try {
   // ---- 4. startBuild without a key fails cleanly ----------------------------
   const started = await talk({ kind: "startBuild" }, 3000);
   const error = started.find((m) => m.kind === "error");
-  check("startBuild with no API key reports an error", /API key/i.test(error?.message ?? ""), error?.message);
+  check("startBuild with no API key reports an error", /API 密钥/.test(error?.message ?? ""), error?.message);
 
   // ---- 5. chrome.history is readable ---------------------------------------
   const domains = await page.evaluate<string[]>(`

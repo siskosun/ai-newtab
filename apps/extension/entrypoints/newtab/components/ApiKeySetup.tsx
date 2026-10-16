@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   PROVIDERS, HOMEPAGE_LANGUAGES, providerPreset,
-  type ProviderId, type HomepageLanguage,
+  type ProviderId, type HomepageLanguage, isKeylessLocalProvider,
 } from "@homepage/agent-core";
 import { t } from "@/lib/i18n";
 import { btn } from "./ui";
@@ -26,8 +26,7 @@ export function ApiKeySetup({locale,onChangeLocale,onSave}: {
   async function save() {
     if (!model.trim()) {setError(t(locale,"modelRequired"));return;}
     if (provider === "compatible" && !endpoint.trim()) {setError(t(locale,"endpointRequired"));return;}
-    const localWithoutKey = provider === "compatible" &&
-      /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\//.test(endpoint);
+    const localWithoutKey = isKeylessLocalProvider(provider, endpoint);
     if (!key.trim() && !localWithoutKey) {setError(t(locale,"keyRequired"));return;}
     setSaving(true);
     setError("");
