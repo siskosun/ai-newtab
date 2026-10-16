@@ -6,7 +6,9 @@
 
 ## 一、下载安装
 
-环境：Chrome 或 Edge、Node.js 20 或以上版本。
+**方式 A：无需开发环境。** 在 [GitHub Actions](https://github.com/siskosun/ai-newtab/actions/workflows/build.yml) 打开最新一次成功的 `Build and test`，下载 `ai-newtab-chrome-mv3` 构建产物并解压。构建产物一般需要登录 GitHub 才能下载，保存期为 14 天。加载解压后含有 `manifest.json` 的文件夹。
+
+**方式 B：自行编译。** 环境：Chrome 或 Edge、Node.js 20 或以上版本。
 
 ```bash
 git clone https://github.com/siskosun/ai-newtab.git
