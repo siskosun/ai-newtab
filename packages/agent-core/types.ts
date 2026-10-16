@@ -109,7 +109,18 @@ export interface RunCallbacks {
   onLog?(line: string): void;
 }
 
+/** Page successfully opened during a build. Read time is NOT the story's publication time. */
+export interface ReadSource {
+  /** Resolved URL after redirects, validated by the site's block rules. */
+  url: string;
+  title: string;
+  /** ISO timestamp when the build read this page. */
+  readAt: string;
+}
+
 export interface HomepageBuildResult {
+  /** Omitted by legacy agent runs that predate provenance capture. */
+  sources?: ReadSource[];
   code: string;
   sessionId: string;
   /** Where the code came from: a session output file, or a fenced block in the final message. */

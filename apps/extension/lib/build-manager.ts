@@ -176,10 +176,10 @@ export class BuildManager {
       });
 
       // Persist the raw TSX; the page transpiles it for preview.
-      await saveHomepage(result.code);
+      await saveHomepage(result.code, result.sources ?? []);
 
       this.state = { ...this.state, running: false, phase: "done" };
-      this.broadcast({ kind: "done", code: result.code });
+      this.broadcast({ kind: "done", code: result.code, sources: result.sources ?? [] });
       await this.mirror(true);
       console.log("[BuildManager] build done", { bytes: result.code.length, source: result.source });
     } catch (error) {

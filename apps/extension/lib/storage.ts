@@ -34,6 +34,8 @@ export interface Homepage {
   code: string;
   /** ISO timestamp of when it was built. */
   timestamp: string;
+  /** Actual browser pages read during generation, not evidence of publication. */
+  sources?: import("@homepage/agent-core").ReadSource[];
 }
 
 export interface Settings {
@@ -106,8 +108,8 @@ export async function loadHomepage(): Promise<Homepage | undefined> {
   return extensionStore.get<Homepage>(KEYS.homepage);
 }
 
-export async function saveHomepage(code: string): Promise<void> {
-  const homepage: Homepage = { code, timestamp: new Date().toISOString() };
+export async function saveHomepage(code: string, sources: import("@homepage/agent-core").ReadSource[] = []): Promise<void> {
+  const homepage: Homepage = { code, timestamp: new Date().toISOString(), sources };
   await extensionStore.set(KEYS.homepage, homepage);
 }
 
