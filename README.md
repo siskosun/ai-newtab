@@ -32,6 +32,12 @@ npx pnpm@10.11.1 extension:test
 
 The original Anthropic Managed Agents harness scripts remain upstream-specific reference tests; they do not validate the new multi-provider pipeline. API end-to-end checks require real user-supplied keys and credits.
 
+## AIHOT-inspired editorial safeguards
+
+This fork borrows **ideas**, not implementation code, from [AIHOT](https://github.com/KKKKhazix/AIHOT): source provenance, cautious event-level deduplication and avoiding false freshness. The new **Sources read** panel lists successfully loaded pages, their read times and a parameter-stripped link. Read time is *not* article publication time; these records are *not* an independent fact-check. Blocked/failed pages never appear. Existing generated homepages acquire a source list after the next successful rebuild.
+
+The model is instructed to group only clearly identical events, link original sources, and never present undated excerpts as breaking news. These are **instructions**, not verified output guarantees. There is no heavyweight AIHOT crawler, double scoring, event database or background service in the extension.
+
 ## Privacy and limitations
 
 Browsing-domain summaries, cleaned excerpts of up to eight pages, and user instructions are sent to the **selected model provider**, possibly including pages opened with a logged-in session. The selected provider's own retention policies apply. Blocked hosts and local/private-network hosts are filtered. Each browser profile stores keys locally in `chrome.storage.local` (accessible to users/extensions with sufficient local privileges); do not publish it to a public Chrome Web Store for shared use without a backend key proxy. Generated TSX is validated before sandboxed rendering, but it is not a formal security sandbox. Treat generated outputs as untrusted and review the privileges of any fork.

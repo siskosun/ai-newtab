@@ -5,7 +5,7 @@
  * for its state (see build-manager.ts). Tabs are thin, disposable views: they
  * connect on AGENT_PORT, receive a snapshot, then stream deltas.
  */
-import type { RunPhase } from "@homepage/agent-core";
+import type { RunPhase, ReadSource } from "@homepage/agent-core";
 
 export const AGENT_PORT = "homepage-agent";
 
@@ -46,7 +46,7 @@ export type BuildMsg =
   | { kind: "phase"; phase: RunPhase; stepIndex: number; detail: string }
   | { kind: "text"; chunk: string } // narration delta
   | { kind: "log"; line: string }
-  | { kind: "done"; code: string } // homepage saved; carries the raw TSX
+  | { kind: "done"; code: string; sources?: ReadSource[] } // homepage saved; carries the raw TSX
   | { kind: "error"; message: string };
 
 /**

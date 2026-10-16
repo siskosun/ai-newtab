@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   DEFAULT_PROVIDER_MODEL, DEFAULT_BLOCKED_SITES, DEFAULT_PROVIDER,
-  type ProviderId, type HomepageLanguage, isKeylessLocalProvider,
+  type ProviderId, type HomepageLanguage, type ReadSource, isKeylessLocalProvider,
 } from "@homepage/agent-core";
 import { DEFAULT_REBUILD_INTERVAL_HOURS } from "@/lib/auto-rebuild";
 import { BUILD_STEPS } from "@/lib/protocol";
@@ -16,6 +16,7 @@ import { ApiKeySetup } from "./components/ApiKeySetup";
 import { BuildProgress } from "./components/BuildProgress";
 import { HomepagePreview } from "./components/HomepagePreview";
 import { SettingsModal } from "./components/SettingsModal";
+import { SourcesPanel } from "./components/SourcesPanel";
 import { btn, errorBox } from "./components/ui";
 import { useHomepageBuild } from "./useHomepageBuild";
 
@@ -40,10 +41,15 @@ export default function App() {
   const [renderedCode, setRenderedCode] = useState<string | null>(null);
   const [resumable, setResumable] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [showSources, setShowSources] = useState(false);
+  const [sources, setSources] = useState<ReadSource[]>([]);
   const [viewProgress, setViewProgress] = useState(false);
   const [dismissedError, setDismissedError] = useState<string | null>(null);
 
-  const { state, build, cancel } = useHomepageBuild((code) => setRenderedCode(toRenderable(code)));
+  const { state, build, cancel } = useHomepageBuild((code, sourcesRead) => {
+    setRenderedCode(toRenderable(code));
+    setSources(sourcesRead);
+  });
 
   useEffect(() => {
     document.documentElement.lang = locale;
@@ -70,7 +76,10 @@ export default function App() {
         setAutoRebuild(settings.autoRebuild);
         setIntervalHours(settings.rebuildIntervalHours ?? DEFAULT_REBUILD_INTERVAL_HOURS);
         setResumable(activeSession ?? null);
-        if (homepage?.code) setRenderedCode(toRenderable(homepage.code));
+        if (homepage?.code) {
+          setRenderedCode(toRenderable(homepage.code));
+          setSources(homepage.sources ?? []);
+        }
       } finally {
         setLoading(false);
       }
@@ -189,6 +198,11 @@ export default function App() {
             {t(locale, "rebuild")}
           </button>
         )}
+        {sources.length > 0 && (
+          <button style={btn} onClick={() => setShowSources(true)} title={t(locale, "readSourceTitle")}>
+            {t(locale, "sources")} · {sources.length}
+          </button>
+        )}
         <button style={btn} onClick={() => setShowSettings(true)} title={t(locale, "settings")}>
           {t(locale, "settings")}
         </button>
@@ -219,6 +233,8 @@ export default function App() {
       )}
 
       <HomepagePreview code={renderedCode} locale={locale} />
+
+      {showSources && <SourcesPanel sources={sources} locale={locale} onClose={() => setShowSources(false)} />}
 
       {showSettings && (
         <SettingsModal

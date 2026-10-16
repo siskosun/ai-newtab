@@ -219,6 +219,35 @@ try {
     domains.join(", "),
   );
 
+  // Local-only provenance panel smoke test: no model API request.
+  const fixture = {
+    homepageData: {
+      code: 'import React from "react";export default function PersonalizedHomepage(){return <main style={{padding:24}}><h1>本地测试首页</h1><p>这是用于验证界面的固定示例内容。</p></main>}',
+      timestamp: new Date().toISOString(),
+      sources: [{url:"https://news.example.org/",title:"来源记录示例",readAt:"2026-10-16T08:00:00.000Z"}],
+    },
+    provider: "openai",
+    providerCredentials: {openai:{apiKey:"offline-browser-fixture",model:"gpt-4.1-mini",endpoint:""}},
+  };
+  await page.evaluate<string>(`chrome.storage.local.set(${JSON.stringify(fixture)}).then(()=> "ok")`);
+  await page.send("Page.reload", {ignoreCache:true});
+  let provenanceButton = false;
+  for (let i = 0; i < 30; i++) {
+    await sleep(250);
+    try {
+      provenanceButton = await page.evaluate<boolean>(`[...document.querySelectorAll("button")].some(b=>b.textContent?.includes("读取来源"))`);
+      if (provenanceButton) break;
+    } catch { /* reload in progress */ }
+  }
+  check("provenance button appears on a saved homepage", provenanceButton);
+  if (provenanceButton) {
+    await page.evaluate<string>(`[...document.querySelectorAll("button")].find(b=>b.textContent?.includes("读取来源"))?.click(); "clicked"`);
+    await sleep(250);
+    const provenanceText=await page.evaluate<string>("document.body.innerText");
+    check("provenance panel shows the actual source title", provenanceText.includes("来源记录示例"));
+    check("panel distinguishes read time from publication time", provenanceText.includes("读取时间不是新闻发布时间"));
+  }
+
   page.close();
   browser.close();
 } catch (err) {

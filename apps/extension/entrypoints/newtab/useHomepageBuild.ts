@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { ReadSource } from "@homepage/agent-core";
 import {
   AGENT_PORT,
   INITIAL_BUILD_STATE,
@@ -41,7 +42,7 @@ function reduce(state: BuildState, msg: BuildMsg): BuildState {
  * one of these, so they all render the same live run. `onDone` receives the
  * new homepage's raw TSX.
  */
-export function useHomepageBuild(onDone: (code: string) => void) {
+export function useHomepageBuild(onDone: (code: string, sources: ReadSource[]) => void) {
   const [state, setState] = useState<BuildState>(INITIAL_BUILD_STATE);
   const portRef = useRef<Port | null>(null);
   const onDoneRef = useRef(onDone);
@@ -52,7 +53,7 @@ export function useHomepageBuild(onDone: (code: string) => void) {
 
     const handleMsg = (raw: unknown) => {
       const msg = raw as BuildMsg;
-      if (msg.kind === "done") onDoneRef.current(msg.code);
+      if (msg.kind === "done") onDoneRef.current(msg.code, msg.sources ?? []);
       setState((s) => reduce(s, msg));
     };
 

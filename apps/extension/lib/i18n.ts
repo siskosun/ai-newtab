@@ -63,6 +63,12 @@ const STRINGS = {
     "errorInvalidOutput": "模型返回的页面未通过安全检查，请重试或更换模型。",
     "errorCancelled": "生成已取消。",
     "errorGeneric": "操作失败，请重试。技术信息：",
+    "sources": "读取来源",
+    "readSourceTitle": "本次实际读取的网站",
+    "readSourceDisclaimer": "这里只记录生成首页时实际打开的网页及读取时间，不代表已核实每条新闻的事实或发布时间。读取时间不是新闻发布时间。",
+    "readAt": "读取于",
+    "closeSources": "关闭来源详情",
+    "readSourceEmpty": "该版本未保存来源记录。请重新生成首页。",
     "previousPage": "已保存的首页"
   },
   "en": {
@@ -126,6 +132,12 @@ const STRINGS = {
     "errorInvalidOutput": "The generated page failed validation. Retry or switch models.",
     "errorCancelled": "Build cancelled.",
     "errorGeneric": "Operation failed. Technical details: ",
+    "sources": "Sources read",
+    "readSourceTitle": "Websites actually read",
+    "readSourceDisclaimer": "These are pages opened during the last successful build, with their read time. This does not verify any specific news item or its publication date. Read time is not publication time.",
+    "readAt": "Read at",
+    "closeSources": "Close source details",
+    "readSourceEmpty": "No source records were saved for this version. Rebuild to capture them.",
     "previousPage": "Saved homepage"
   },
   "ja": {
@@ -189,6 +201,12 @@ const STRINGS = {
     "errorInvalidOutput": "生成されたページは安全性チェックを通過できませんでした。再試行するかモデルを変更してください。",
     "errorCancelled": "生成を中止しました。",
     "errorGeneric": "処理に失敗しました。技術情報：",
+    "sources": "参照元",
+    "readSourceTitle": "実際に読み取ったサイト",
+    "readSourceDisclaimer": "前回の生成時に開いたページと読み取り時刻です。各ニュースの内容や公開日を検証した記録ではありません。読み取り時刻は記事の公開時刻ではありません。",
+    "readAt": "読み取り時刻",
+    "closeSources": "参照元を閉じる",
+    "readSourceEmpty": "この版には参照元の記録がありません。再生成してください。",
     "previousPage": "保存済みホームページ"
   }
 } as const;
