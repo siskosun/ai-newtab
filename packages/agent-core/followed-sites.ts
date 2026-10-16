@@ -78,7 +78,7 @@ export function selectHomepageSites(
  for(const site of history){
   if(selected.length>=MAX_HOMEPAGE_SITES)break;
   const url="https://"+site.domain+"/";
-  if(!isAllowedUrl(url,blockedSites))continue;
+  if(!isAllowedUrl(url,[...blockedSites]))continue;
   const host=canonicalHost(url);
   if(seenHosts.has(host))continue;
   seenHosts.add(host);
