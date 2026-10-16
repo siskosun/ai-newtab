@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { DEFAULT_MODEL, DEFAULT_BLOCKED_SITES, DEFAULT_PROVIDER, type ProviderId } from "@homepage/agent-core";
+import { DEFAULT_PROVIDER_MODEL, DEFAULT_BLOCKED_SITES, DEFAULT_PROVIDER, type ProviderId } from "@homepage/agent-core";
 import { DEFAULT_REBUILD_INTERVAL_HOURS } from "@/lib/auto-rebuild";
 import { BUILD_STEPS } from "@/lib/protocol";
 import { KEYS, extensionStore, loadHomepage, loadSettings, saveSetting, saveProviderConfiguration } from "@/lib/storage";
@@ -16,7 +16,7 @@ export default function App() {
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [systemPrompt, setSystemPrompt] = useState("");
   const [blockedSites, setBlockedSites] = useState<string[]>(DEFAULT_BLOCKED_SITES);
-  const [model, setModel] = useState<string>(DEFAULT_MODEL);
+  const [model, setModel] = useState<string>(DEFAULT_PROVIDER_MODEL);
   const [provider,setProvider]=useState<ProviderId>(DEFAULT_PROVIDER);
   const [endpoint,setEndpoint]=useState("");
   const [autoRebuild, setAutoRebuild] = useState(true);

@@ -1,4 +1,4 @@
-import { DEFAULT_PROVIDER, DEFAULT_MODEL as MULTI_DEFAULT_MODEL, providerPreset, isProviderId, type ProviderId } from "@homepage/agent-core";
+import { DEFAULT_PROVIDER, DEFAULT_PROVIDER_MODEL, providerPreset, isProviderId, type ProviderId } from "@homepage/agent-core";
 import {
   DEFAULT_BLOCKED_SITES,
   STORAGE_KEYS as AGENT_KEYS,
@@ -84,7 +84,7 @@ export async function loadSettings(): Promise<Settings> {
     systemPrompt: (s[KEYS.systemPrompt] as string | undefined) ?? "",
     blockedSites: (s[KEYS.blockedSites] as string[] | undefined) ?? [...DEFAULT_BLOCKED_SITES],
     // Fall back if a stored model is no longer offered.
-    model: selected?.model ?? (provider === DEFAULT_PROVIDER ? (legacyModel ?? MULTI_DEFAULT_MODEL) : providerPreset(provider).model),
+    model: selected?.model ?? (provider === DEFAULT_PROVIDER ? (legacyModel ?? DEFAULT_PROVIDER_MODEL) : providerPreset(provider).model),
     provider,
     endpoint: selected?.endpoint ?? (s[KEYS.endpoint] as string | undefined) ?? "",
     autoRebuild: s[KEYS.autoRebuild] !== false,

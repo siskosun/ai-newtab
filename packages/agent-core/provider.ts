@@ -10,7 +10,7 @@ export const PROVIDERS = [
 export type ProviderId = typeof PROVIDERS[number]["id"];
 export interface ProviderSettings { provider:ProviderId; model:string; apiKey:string; endpoint?:string }
 export const DEFAULT_PROVIDER: ProviderId = "openai";
-export const DEFAULT_MODEL = "gpt-4.1-mini";
+export const DEFAULT_PROVIDER_MODEL = "gpt-4.1-mini";
 export function providerPreset(p:ProviderId){ return PROVIDERS.find(x=>x.id===p) ?? PROVIDERS[0]; }
 export function isProviderId(x:unknown):x is ProviderId {return PROVIDERS.some(p=>p.id===x)}
 const URLS:Record<Exclude<ProviderId,"compatible"|"gemini">,string> = {
