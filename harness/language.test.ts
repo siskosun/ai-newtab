@@ -23,7 +23,7 @@ test("all UI languages contain meaningful translated labels and errors",()=>{
  expect(t("zh-CN","endpoint")).toContain("接口");
  expect(describeBuildError("zh-CN","Model request failed: NetworkError")).toContain("模型连接失败");
 });
-test("settings start in Chinese, persist user locale and preserve other test("local API endpoint may omit a key without permitting insecure remote hosts",()=>{
+test("local API endpoint may omit a key without permitting insecure remote hosts",()=>{
  expect(isKeylessLocalProvider("compatible","http://localhost:11434/v1/chat/completions")).toBe(true);
  expect(isKeylessLocalProvider("compatible","http://127.0.0.1:1234/v1/chat/completions")).toBe(true);
  expect(isKeylessLocalProvider("compatible","http://remote.test/v1/chat/completions")).toBe(false);
