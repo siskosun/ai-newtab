@@ -53,7 +53,7 @@ test("AIHOT-inspired curation: only successfully read, allowed sources are persi
 
 test("Source manifest reports no unobserved pages even when all reads fail",async()=>{
  const previous=globalThis.fetch;
- globalThis.fetch=(async()=>new Response(JSON.stringify({choices:[{message:{content:'import React from "react";export default function PersonalizedHomepage(){return <main style={{padding:20}}><h1>暂无可核实内容</h1><p>暂时无法读取关注网站的页面，未展示未经核实的新闻条目。</p></main>}'}}]}),{headers:{"content-type":"application/json"}})) as typeof fetch;
+ globalThis.fetch=(async()=>new Response(JSON.stringify({choices:[{message:{content:'import React from "react";export default function PersonalizedHomepage(){return <main style={{padding:20}}><h1>暂无可核实内容</h1><p>暂时无法读取关注网站的页面，未展示未经核实的新闻条目。</p></main>}'}}]}),{headers:{"content-type":"application/json"}})) as unknown as typeof fetch;
  try{
   const bridge:BrowserBridge={
    async getHistory(){return {sites:[],totalSitesSeen:0}},
