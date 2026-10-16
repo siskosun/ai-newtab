@@ -17,7 +17,7 @@ export function ApiKeySetup({locale,onChangeLocale,onSave}: {
   onSave: (key: string, provider: ProviderId, model: string, endpoint: string) => Promise<void>;
 }) {
   const [provider,setProvider] = useState<ProviderId>("openai");
-  const [model,setModel] = useState(providerPreset("openai").model);
+  const [model,setModel] = useState<string>(providerPreset("openai").model);
   const [key,setKey] = useState("");
   const [endpoint,setEndpoint] = useState("");
   const [error,setError] = useState("");
