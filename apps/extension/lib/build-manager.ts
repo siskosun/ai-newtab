@@ -28,7 +28,7 @@ const SNAPSHOT_THROTTLE_MS = 2_000;
 const NARRATION_STORAGE_CAP = 2_000;
 
 /**
- * Owns the single build. Runs `runHomepageBuild` in the worker, holds live state,
+ * Owns the single build. Runs `runMultiHomepageBuild` in the worker, holds live state,
  * enforces a single-flight lock, broadcasts progress to every connected tab,
  * mirrors a throttled snapshot to storage, and reattaches to an interrupted run
  * on wake.
@@ -84,9 +84,8 @@ export class BuildManager {
 
   /**
    * Called on worker wake and on every alarm tick. If a session was left
-   * mid-flight, reattach and continue (lossless — the orchestrator replays the
-   * event log and re-answers orphaned tool calls). Otherwise, consider the daily
-   * rebuild. The single-flight lock is the arbiter that keeps these from racing.
+   * mid-flight, restart the build (the current multi-provider pipeline has no managed session
+   * to reattach to). Otherwise, consider the daily rebuild. The single-flight lock is the arbiter that keeps these from racing.
    */
   async tick() {
     if (this.running) {
