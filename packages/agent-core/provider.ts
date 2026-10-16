@@ -19,6 +19,15 @@ const URLS:Record<Exclude<ProviderId,"compatible"|"gemini">,string> = {
  deepseek:"https://api.deepseek.com/chat/completions",
  qwen:"https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
 };
+/** Local OpenAI-compatible servers may omit an API key. */
+export function isKeylessLocalProvider(provider:ProviderId, endpoint?:string):boolean {
+ if(provider!=="compatible" || !endpoint)return false;
+ try {
+  const u=new URL(endpoint);
+  return u.protocol==="http:" && ["localhost","127.0.0.1","[::1]"].includes(u.hostname)
+    && u.pathname.endsWith("/chat/completions") && !u.username && !u.password && !u.search && !u.hash;
+ }catch{return false;}
+}
 export function providerEndpoint(s:ProviderSettings):URL {
  if (!s.model.trim() || s.model.length > 180 || /[\r\n]/.test(s.model)) throw Error("Enter a valid model ID.");
  let raw = s.provider==="compatible" ? s.endpoint?.trim() : s.provider==="gemini"
@@ -31,7 +40,7 @@ export function providerEndpoint(s:ProviderSettings):URL {
    throw Error("HTTPS is required except for a local endpoint.");
  if(url.username || url.password || url.hash || url.search) throw Error("API endpoint must not contain credentials or query parameters.");
  if(s.provider==="compatible" && !url.pathname.endsWith("/chat/completions")) throw Error("Endpoint must end in /chat/completions.");
- if(!s.apiKey.trim() && !(s.provider==="compatible" && local)) throw Error("Set an API key for the selected provider.");
+ if(!s.apiKey.trim() && !isKeylessLocalProvider(s.provider,s.endpoint)) throw Error("Set an API key for the selected provider.");
  return url;
 }
 export async function generateText(s:ProviderSettings,system:string,prompt:string,signal?:AbortSignal):Promise<string>{

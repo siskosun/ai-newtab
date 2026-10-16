@@ -1,5 +1,6 @@
 
-import { runMultiHomepageBuild, type RunPhase } from "@homepage/agent-core";
+import { runMultiHomepageBuild, isKeylessLocalProvider, type RunPhase, type HomepageLanguage } from "@homepage/agent-core";
+import { t, describeBuildError } from "./i18n";
 import { rebuildIntervalMs, shouldAutoRebuild } from "./auto-rebuild";
 import { browserBridge } from "./browser-bridge";
 import {
@@ -27,7 +28,7 @@ const SNAPSHOT_THROTTLE_MS = 2_000;
 const NARRATION_STORAGE_CAP = 2_000;
 
 /**
- * Owns the single build. Runs `runHomepageBuild` in the worker, holds live state,
+ * Owns the single build. Runs `runMultiHomepageBuild` in the worker, holds live state,
  * enforces a single-flight lock, broadcasts progress to every connected tab,
  * mirrors a throttled snapshot to storage, and reattaches to an interrupted run
  * on wake.
@@ -83,9 +84,8 @@ export class BuildManager {
 
   /**
    * Called on worker wake and on every alarm tick. If a session was left
-   * mid-flight, reattach and continue (lossless — the orchestrator replays the
-   * event log and re-answers orphaned tool calls). Otherwise, consider the daily
-   * rebuild. The single-flight lock is the arbiter that keeps these from racing.
+   * mid-flight, restart the build (the current multi-provider pipeline has no managed session
+   * to reattach to). Otherwise, consider the daily rebuild. The single-flight lock is the arbiter that keeps these from racing.
    */
   async tick() {
     if (this.running) {
@@ -117,7 +117,7 @@ export class BuildManager {
     if (
       !shouldAutoRebuild({
         enabled: settings.autoRebuild,
-        hasApiKey: Boolean(settings.apiKey),
+        hasApiKey: Boolean(settings.apiKey) || isKeylessLocalProvider(settings.provider, settings.endpoint),
         isRunning: this.running,
         lastBuildTimestamp: homepage?.timestamp,
         lastAutoAttemptTimestamp: lastAttempt,
@@ -142,12 +142,12 @@ export class BuildManager {
       return; // single-flight: a second start just attaches.
     }
 
-    const { apiKey, systemPrompt, model, provider, endpoint } = await loadSettings();
-    if (!apiKey) {
+    const { apiKey, systemPrompt, model, provider, endpoint, locale } = await loadSettings();
+    if (!apiKey && !isKeylessLocalProvider(provider, endpoint)) {
       // Manual builds are gated behind the key-setup screen and auto-builds
       // require a key, so this only happens if the key was removed.
       console.warn("[BuildManager] startBuild aborted — no API key in storage");
-      const message = "No model API key found. Configure the provider in Settings.";
+      const message = t(locale, "notConfigured");
       this.state = { ...INITIAL_BUILD_STATE, phase: "error", error: message };
       this.broadcast({ kind: "error", message });
       return;
@@ -162,7 +162,8 @@ export class BuildManager {
 
     try {
       const result = await runMultiHomepageBuild({
-        provider: { provider, model, apiKey, endpoint },
+        provider: { provider, model, apiKey: apiKey ?? "", endpoint },
+        language: locale,
         bridge: browserBridge,
         userSystemPrompt: systemPrompt,
         blockedSites: async () => (await loadSettings()).blockedSites,
@@ -186,7 +187,7 @@ export class BuildManager {
       this.state = { ...this.state, running: false, phase: "error", error: message };
       this.broadcast({ kind: "error", message });
       await this.mirror(true);
-      this.notifyFailure(message);
+      this.notifyFailure(message, locale);
       console.error("[BuildManager] build failed", error);
     } finally {
       this.running = false;
@@ -271,7 +272,7 @@ export class BuildManager {
 
   // ---- failure surfacing ---------------------------------------------------
 
-  private notifyFailure(message: string) {
+  private notifyFailure(message: string, locale: HomepageLanguage) {
     // Only ping when nobody is watching — an open tab already shows the error
     // inline. A headless daily build that fails otherwise vanishes silently.
     if (this.ports.size > 0) return;
@@ -279,8 +280,8 @@ export class BuildManager {
       browser.notifications.create({
         type: "basic",
         iconUrl: browser.runtime.getURL("/icon/128.png"),
-        title: "Homepage build failed",
-        message: message.slice(0, 200),
+        title: t(locale, "failedNotification"),
+        message: describeBuildError(locale, message).slice(0, 200),
       });
     } catch {
       // notifications permission missing or API unavailable — nothing else to do.

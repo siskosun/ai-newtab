@@ -4,8 +4,9 @@ import { defineConfig } from "wxt";
 export default defineConfig({
   modules: ["@wxt-dev/module-react"],
   manifest: {
-    name: "AI Homepage",
-    description: "A new-tab page an agent rebuilds daily from what you've actually been browsing.",
+    name: "__MSG_appName__",
+    default_locale: "zh_CN",
+    description: "__MSG_appDescription__",
     permissions: [
       "history", //       getHistory tool
       "tabs", //          getPageHtml: open pages and watch them load

@@ -1,5 +1,7 @@
 # AI Homepage — multi-provider edition
 
+**Default language: Simplified Chinese (简体中文).** Setup, controls and generated homepages can switch between 简体中文, English and 日本語. See [中文版使用说明](README.zh-CN.md).
+
 A Chrome/Edge new-tab extension derived from [ThariqS/ai-newtab](https://github.com/ThariqS/ai-newtab) (MIT License, copyright 2026 Thariq Shihipar). Upstream snapshot: `5c8d0b11c3aa5d2eab91dbc48e434233f59faa2b`. See [LICENSE](LICENSE).
 
 ## Supported model APIs
